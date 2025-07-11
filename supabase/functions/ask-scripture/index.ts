@@ -96,9 +96,11 @@ serve(async (req) => {
     if (queryEmbedding) {
       console.log('Using semantic search with embeddings...');
       // Use semantic search with embeddings
+      const vectorString = '[' + queryEmbedding.join(',') + ']';
+      console.log('Vector string format:', vectorString.substring(0, 50) + '...');
       const { data, error: searchError } = await supabase
         .rpc('match_scripture', {
-          query_embedding: `'[${queryEmbedding.join(',')}]'`,
+          query_embedding: vectorString,
           match_count: 6
         });
       
