@@ -243,7 +243,7 @@ ${context}
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: systemMessage },
             { role: 'user', content: userMessage }
@@ -254,19 +254,14 @@ ${context}
       });
 
       console.log('OpenAI API response status:', chatResponse.status);
-      console.log('OpenAI API response headers:', JSON.stringify([...chatResponse.headers.entries()]));
       
       if (!chatResponse.ok) {
         const errorText = await chatResponse.text();
-        console.error('OpenAI Chat API error status:', chatResponse.status);
-        console.error('OpenAI Chat API error response:', errorText);
+        console.error('OpenAI Chat API error:', errorText);
         
         if (errorText.includes('insufficient_quota')) {
           console.log('Quota exceeded, using fallback advice...');
           throw new Error('quota_exceeded');
-        } else if (errorText.includes('model') && errorText.includes('does not exist')) {
-          console.log('Model does not exist, trying fallback model...');
-          throw new Error('model_not_found');
         } else {
           throw new Error(`OpenAI Chat API error: ${errorText}`);
         }
@@ -274,7 +269,6 @@ ${context}
 
       const chatData = await chatResponse.json();
       console.log('OpenAI response received:', chatData.choices?.length || 0, 'choices');
-      console.log('OpenAI full response:', JSON.stringify(chatData, null, 2));
       
       const gptResponse = chatData.choices[0].message.content;
       console.log('GPT raw response:', gptResponse);
