@@ -39,6 +39,7 @@ serve(async (req) => {
     const { query, user_id } = await req.json();
 
     console.log('Processing query:', query);
+    console.log('User ID:', user_id);
 
     if (!query || query.trim().length === 0) {
       throw new Error('Query is required');
@@ -90,6 +91,7 @@ serve(async (req) => {
     let scriptures;
     
     if (queryEmbedding) {
+      console.log('Using semantic search with embeddings...');
       // Use semantic search with embeddings
       const { data, error: searchError } = await supabase
         .rpc('match_scripture', {
@@ -101,12 +103,13 @@ serve(async (req) => {
         console.error('Semantic search error:', searchError);
         scriptures = null;
       } else {
+        console.log('Semantic search returned:', data?.length || 0, 'results');
         scriptures = data;
       }
     }
     
     // Fallback to text search if embedding search failed
-    if (!scriptures) {
+    if (!scriptures || scriptures.length === 0) {
       console.log('Using fallback text search...');
       const { data, error: textSearchError } = await supabase
         .from('scripture')
@@ -118,12 +121,13 @@ serve(async (req) => {
         console.error('Text search error:', textSearchError);
         scriptures = [];
       } else {
+        console.log('Text search returned:', data?.length || 0, 'results');
         // Add similarity score for consistency (fake score for text search)
         scriptures = data?.map(item => ({ ...item, similarity: 0.8 })) || [];
       }
     }
 
-    console.log('Found scriptures:', scriptures?.length || 0);
+    console.log('Final scriptures count:', scriptures?.length || 0);
 
     // 3. If sensitive topic, return only scriptures without LLM advice
     if (isSensitiveTopic) {
