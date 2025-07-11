@@ -23,16 +23,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   });
 
   const languages = [
-    { id: 'ar', name: 'العربية', flag: '🇸🇦' },
-    { id: 'en', name: 'English', flag: '🇺🇸' },
-    { id: 'he', name: 'עברית', flag: '🇮🇱' }
+    { id: 'ar', name: 'العربية', flag: '🇾🇪' }
   ];
 
   const traditions = [
-    { id: 'islam', name: 'الإسلام', icon: '☪️', description: 'القرآن والسنة' },
-    { id: 'christian', name: 'المسيحية', icon: '✝️', description: 'الكتاب المقدس' },
-    { id: 'jewish', name: 'اليهودية', icon: '✡️', description: 'التوراة والتلمود' },
-    { id: 'universal', name: 'عام', icon: '🌟', description: 'حكمة روحية شاملة' }
+    { id: 'islam', name: 'الإسلام', icon: '☪️', description: 'القرآن والسنة' }
   ];
 
   const goals = [
