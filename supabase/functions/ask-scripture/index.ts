@@ -294,12 +294,20 @@ ${context}
       }
     }
 
-    return new Response(JSON.stringify({
+    console.log('Final llmAdvice object:', JSON.stringify(llmAdvice, null, 2));
+    console.log('Practical tip:', llmAdvice?.practical_tip);
+    console.log('Dua:', llmAdvice?.dua);
+    
+    const finalResponse = {
       scriptures: scriptures || [],
-      practical_tip: llmAdvice.practical_tip,
-      dua: llmAdvice.dua,
+      practical_tip: llmAdvice?.practical_tip || "حدث خطأ في توليد النصيحة",
+      dua: llmAdvice?.dua || "اللهم أرشدنا إلى الحق",
       is_sensitive: false
-    }), {
+    };
+    
+    console.log('Final response being sent:', JSON.stringify(finalResponse, null, 2));
+    
+    return new Response(JSON.stringify(finalResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
