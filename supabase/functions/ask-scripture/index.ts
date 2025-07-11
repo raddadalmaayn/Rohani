@@ -236,7 +236,7 @@ ${context}
     // 4. Generate practical advice using GPT (with fallback)
     console.log('Starting GPT generation...');
     console.log('Context for GPT:', context.substring(0, 200) + '...');
-    console.log('OpenAI API Key available:', !!openAIApiKey);
+    console.log('OpenAI API Key length:', openAIApiKey?.length || 'undefined');
     
     let llmAdvice: LLMResponse;
     
