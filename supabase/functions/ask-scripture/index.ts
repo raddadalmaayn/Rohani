@@ -98,7 +98,7 @@ serve(async (req) => {
       // Use semantic search with embeddings
       const { data, error: searchError } = await supabase
         .rpc('match_scripture', {
-          query_embedding: `[${queryEmbedding.join(',')}]`,
+          query_embedding: `'[${queryEmbedding.join(',')}]'`,
           match_count: 6
         });
       
@@ -107,6 +107,7 @@ serve(async (req) => {
         scriptures = null;
       } else {
         console.log('Semantic search returned:', data?.length || 0, 'results');
+        console.log('SEMANTIC DATA →', JSON.stringify(data, null, 2));
         scriptures = data;
       }
     }
