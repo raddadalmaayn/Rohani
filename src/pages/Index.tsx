@@ -110,10 +110,13 @@ const Index = () => {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        loadProfile(session.user.id);
+        // Use setTimeout to defer Supabase calls and avoid deadlock
+        setTimeout(() => {
+          loadProfile(session.user.id);
+        }, 0);
       } else {
         setProfile(null);
         setLoading(false);
