@@ -117,6 +117,13 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
         }
       }
       
+      console.log('Setting response data:', {
+        scriptures: response.scriptures?.length || 0,
+        practical_tip: response.practical_tip,
+        dua: response.dua,
+        is_sensitive: response.is_sensitive
+      });
+      
       setResults(response.scriptures || []);
       setPracticalTip(response.practical_tip || '');
       setDua(response.dua || '');
