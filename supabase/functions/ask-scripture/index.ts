@@ -129,25 +129,40 @@ serve(async (req) => {
       console.log('Using fallback text search...');
       console.log('Search query:', query);
       
-      // Try multiple text search approaches
-      const { data, error: textSearchError } = await supabase
-        .from('scripture')
-        .select('id, source_ref, text_ar')
-        .or(`text_ar.ilike.%${query}%,source_ref.ilike.%${query}%`)
-        .limit(6);
-        
-      console.log('Text search error:', textSearchError);
-      console.log('Text search results:', data?.length || 0);
-      console.log('Text search data:', JSON.stringify(data));
-        
-      if (textSearchError) {
-        console.error('Text search error:', textSearchError);
-        scriptures = [];
-      } else {
-        console.log('Text search returned:', data?.length || 0, 'results');
-        // Add similarity score for consistency (fake score for text search)
-        scriptures = data?.map(item => ({ ...item, similarity: 0.8 })) || [];
+      // Try broader search terms - extract keywords and search more leniently
+      const keywords = query.split(/\s+/).filter(word => word.length > 2);
+      console.log('Keywords extracted:', keywords);
+      
+      let textData = null;
+      
+      // Try searching for each keyword
+      for (const keyword of keywords) {
+        console.log(`Searching for keyword: ${keyword}`);
+        const { data } = await supabase
+          .from('scripture')
+          .select('id, source_ref, text_ar')
+          .ilike('text_ar', `%${keyword}%`)
+          .limit(6);
+          
+        if (data && data.length > 0) {
+          console.log(`Found ${data.length} results for keyword: ${keyword}`);
+          textData = data;
+          break;
+        }
       }
+      
+      // If no keyword matches, return all scriptures
+      if (!textData || textData.length === 0) {
+        console.log('No keyword matches, returning all scriptures');
+        const { data } = await supabase
+          .from('scripture')
+          .select('id, source_ref, text_ar')
+          .limit(6);
+        textData = data || [];
+      }
+      
+      console.log('Final text search results:', textData?.length || 0);
+      scriptures = textData?.map(item => ({ ...item, similarity: 0.8 })) || [];
     }
 
     console.log('Final scriptures count:', scriptures?.length || 0);
