@@ -171,21 +171,23 @@ const Index = () => {
     );
   }
 
-  if (!user || !profile) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="text-6xl mb-6">🕊️</div>
           <h1 className="text-3xl font-bold mb-4">روحاني</h1>
           <p className="text-muted-foreground mb-6">دقيقة سكينة… كلما تعب قلبك</p>
-          <p className="text-muted-foreground">جاري إنشاء حسابك...</p>
+          <Button onClick={createAnonymousUser} disabled={loading}>
+            ابدأ الرحلة
+          </Button>
         </div>
       </div>
     );
   }
 
-  // Show onboarding if not completed
-  if (!isOnboarded) {
+  // Show onboarding if profile doesn't exist or not completed
+  if (!profile || !isOnboarded) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
 
