@@ -48,38 +48,79 @@ serve(async (req) => {
     const sensitiveTopics = /(?:طلاق|حرام|حلال|فتوى|زكاة|ميراث|أحكام|فقه)/;
     const isSensitiveTopic = sensitiveTopics.test(query);
 
-    // 1. Get embedding for the query
+    // 1. Get embedding for the query (with fallback for quota issues)
     console.log('Getting embedding for query...');
-    const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        input: query,
-        model: 'text-embedding-3-large'
-      }),
-    });
-
-    if (!embeddingResponse.ok) {
-      throw new Error(`OpenAI Embedding API error: ${await embeddingResponse.text()}`);
-    }
-
-    const embeddingData = await embeddingResponse.json();
-    const queryEmbedding = embeddingData.data[0].embedding;
-
-    // 2. Search for similar scriptures
-    console.log('Searching for similar scriptures...');
-    const { data: scriptures, error: searchError } = await supabase
-      .rpc('match_scripture', {
-        query_embedding: queryEmbedding,
-        match_count: 6
+    let queryEmbedding: number[] | null = null;
+    
+    try {
+      const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: query,
+          model: 'text-embedding-3-large'
+        }),
       });
 
-    if (searchError) {
-      console.error('Scripture search error:', searchError);
-      throw new Error(`Scripture search failed: ${searchError.message}`);
+      if (!embeddingResponse.ok) {
+        const errorText = await embeddingResponse.text();
+        console.error('OpenAI Embedding API error:', errorText);
+        
+        // Check if it's a quota error
+        if (errorText.includes('insufficient_quota')) {
+          console.log('Quota exceeded, falling back to text search...');
+          queryEmbedding = null; // Will trigger fallback search
+        } else {
+          throw new Error(`OpenAI Embedding API error: ${errorText}`);
+        }
+      } else {
+        const embeddingData = await embeddingResponse.json();
+        queryEmbedding = embeddingData.data[0].embedding;
+      }
+    } catch (embeddingError) {
+      console.error('Embedding generation failed:', embeddingError);
+      queryEmbedding = null; // Will trigger fallback search
+    }
+
+    // 2. Search for similar scriptures (with fallback)
+    console.log('Searching for scriptures...');
+    let scriptures;
+    
+    if (queryEmbedding) {
+      // Use semantic search with embeddings
+      const { data, error: searchError } = await supabase
+        .rpc('match_scripture', {
+          query_embedding: queryEmbedding,
+          match_count: 6
+        });
+      
+      if (searchError) {
+        console.error('Semantic search error:', searchError);
+        scriptures = null;
+      } else {
+        scriptures = data;
+      }
+    }
+    
+    // Fallback to text search if embedding search failed
+    if (!scriptures) {
+      console.log('Using fallback text search...');
+      const { data, error: textSearchError } = await supabase
+        .from('scripture')
+        .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+        .or(`text_ar.ilike.%${query}%,source_ref.ilike.%${query}%,chapter_name.ilike.%${query}%`)
+        .limit(6);
+        
+      if (textSearchError) {
+        console.error('Text search error:', textSearchError);
+        scriptures = [];
+      } else {
+        // Add similarity score for consistency (fake score for text search)
+        scriptures = data?.map(item => ({ ...item, similarity: 0.8 })) || [];
+      }
     }
 
     console.log('Found scriptures:', scriptures?.length || 0);
@@ -136,44 +177,55 @@ ${context}
 
 أعطني نصيحة عملية ودعاء مناسب.`;
 
-    console.log('Calling OpenAI for advice...');
-    const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: userMessage }
-        ],
-        temperature: 0.7,
-        max_tokens: 300
-      }),
-    });
-
-    if (!chatResponse.ok) {
-      throw new Error(`OpenAI Chat API error: ${await chatResponse.text()}`);
-    }
-
-    const chatData = await chatResponse.json();
-    const gptResponse = chatData.choices[0].message.content;
-
-    console.log('GPT response received');
-
-    // Parse JSON response from GPT
+    // 4. Generate practical advice using GPT (with fallback)
     let llmAdvice: LLMResponse;
+    
     try {
-      llmAdvice = JSON.parse(gptResponse);
-    } catch (parseError) {
-      console.error('Failed to parse GPT response as JSON:', gptResponse);
-      // Fallback response
-      llmAdvice = {
-        practical_tip: "ابدأ بخطوات صغيرة واستعن بالله في كل أمورك.",
-        dua: "اللهم أعنا على ذكرك وشكرك وحسن عبادتك"
-      };
+      const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: userMessage }
+          ],
+          temperature: 0.7,
+          max_tokens: 300
+        }),
+      });
+
+      if (!chatResponse.ok) {
+        const errorText = await chatResponse.text();
+        console.error('OpenAI Chat API error:', errorText);
+        
+        if (errorText.includes('insufficient_quota')) {
+          console.log('Quota exceeded, using fallback advice...');
+          throw new Error('quota_exceeded');
+        } else {
+          throw new Error(`OpenAI Chat API error: ${errorText}`);
+        }
+      }
+
+      const chatData = await chatResponse.json();
+      const gptResponse = chatData.choices[0].message.content;
+
+      console.log('GPT response received');
+
+      // Parse JSON response from GPT
+      try {
+        llmAdvice = JSON.parse(gptResponse);
+      } catch (parseError) {
+        console.error('Failed to parse GPT response as JSON:', gptResponse);
+        throw new Error('parse_error');
+      }
+    } catch (gptError) {
+      console.log('GPT generation failed, using fallback advice...');
+      // Fallback advice based on query content
+      llmAdvice = generateFallbackAdvice(query);
     }
 
     // Store query for analytics (optional)
@@ -213,3 +265,36 @@ ${context}
     });
   }
 });
+
+// Fallback advice generator when OpenAI is unavailable
+function generateFallbackAdvice(query: string): LLMResponse {
+  const queryLower = query.toLowerCase();
+  
+  // Simple keyword-based fallback advice
+  if (queryLower.includes('صلاة') || queryLower.includes('صلى')) {
+    return {
+      practical_tip: "ابدأ بالصلوات الخمس في أوقاتها، واجعل لك مكاناً هادئاً للصلاة.",
+      dua: "اللهم أعني على إقام الصلاة وأدائها في وقتها"
+    };
+  } else if (queryLower.includes('ذكر') || queryLower.includes('تسبيح')) {
+    return {
+      practical_tip: "اجعل لسانك رطباً بذكر الله، ابدأ بـ 33 تسبيحة و33 تحميدة و34 تكبيرة.",
+      dua: "اللهم اجعل قلبي عامراً بذكرك ولساني رطباً بشكرك"
+    };
+  } else if (queryLower.includes('قرآن') || queryLower.includes('تلاوة')) {
+    return {
+      practical_tip: "اقرأ صفحة واحدة من القرآن يومياً، وتدبر في معانيها.",
+      dua: "اللهم اجعل القرآن ربيع قلبي ونور صدري"
+    };
+  } else if (queryLower.includes('سكينة') || queryLower.includes('طمأنينة')) {
+    return {
+      practical_tip: "أكثر من الاستغفار والذكر، وتوكل على الله في جميع أمورك.",
+      dua: "اللهم أنت السلام ومنك السلام، أدخلني في السلام"
+    };
+  } else {
+    return {
+      practical_tip: "ابدأ بخطوات صغيرة، واستعن بالله في كل أمورك، والزم الاستغفار.",
+      dua: "اللهم أرشدنا إلى ما فيه خير ديننا ودنيانا وآخرتنا"
+    };
+  }
+}
