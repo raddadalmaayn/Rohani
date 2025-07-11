@@ -56,6 +56,8 @@ serve(async (req) => {
           headers: {
             'Authorization': `Bearer ${openAIApiKey}`,
             'Content-Type': 'application/json',
+            'OpenAI-Organization': 'org-94b5lzv0LSQe5YkW7LQ0x5jU',
+            'OpenAI-Project': 'proj_YdvX7tD5M7UJnVl4tV9PkmsT',
           },
           body: JSON.stringify({
             input: scripture.text_ar,
