@@ -93,17 +93,21 @@ const Index = () => {
     
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.id);
       if (!mounted) return;
       setUser(session?.user ?? null);
       if (session?.user) {
         loadProfile(session.user.id);
       } else {
         setLoading(false);
+        // Auto-create anonymous user if no session exists
+        createAnonymousUser();
       }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, session?.user?.id);
       if (!mounted) return;
       
       setUser(session?.user ?? null);
@@ -161,10 +165,6 @@ const Index = () => {
   }
 
   if (!user || !profile) {
-    // Auto-create anonymous user if none exists
-    if (!loading) {
-      createAnonymousUser();
-    }
     return (
       <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
         <div className="text-center max-w-md">
