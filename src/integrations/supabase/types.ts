@@ -14,7 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          country: string | null
+          created_at: string
+          display_name: string | null
+          email_notifications: boolean | null
+          facebook_url: string | null
+          first_name: string | null
+          github_url: string | null
+          id: string
+          instagram_url: string | null
+          is_active: boolean | null
+          is_verified: boolean | null
+          language: string | null
+          last_name: string | null
+          last_seen_at: string | null
+          linkedin_url: string | null
+          location: string | null
+          marketing_emails: boolean | null
+          notifications_enabled: boolean | null
+          phone: string | null
+          preferred_scripture_language: string | null
+          spiritual_goal: string | null
+          spiritual_tradition: string | null
+          subscription_tier: string | null
+          theme: string | null
+          timezone: string | null
+          twitter_url: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+          website: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          country?: string | null
+          created_at?: string
+          display_name?: string | null
+          email_notifications?: boolean | null
+          facebook_url?: string | null
+          first_name?: string | null
+          github_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          language?: string | null
+          last_name?: string | null
+          last_seen_at?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          marketing_emails?: boolean | null
+          notifications_enabled?: boolean | null
+          phone?: string | null
+          preferred_scripture_language?: string | null
+          spiritual_goal?: string | null
+          spiritual_tradition?: string | null
+          subscription_tier?: string | null
+          theme?: string | null
+          timezone?: string | null
+          twitter_url?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+          website?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          country?: string | null
+          created_at?: string
+          display_name?: string | null
+          email_notifications?: boolean | null
+          facebook_url?: string | null
+          first_name?: string | null
+          github_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          language?: string | null
+          last_name?: string | null
+          last_seen_at?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          marketing_emails?: boolean | null
+          notifications_enabled?: boolean | null
+          phone?: string | null
+          preferred_scripture_language?: string | null
+          spiritual_goal?: string | null
+          spiritual_tradition?: string | null
+          subscription_tier?: string | null
+          theme?: string | null
+          timezone?: string | null
+          twitter_url?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
