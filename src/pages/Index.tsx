@@ -4,6 +4,8 @@ import { AskScripture } from '@/components/AskScripture';
 import { TestEmbeddings } from '@/components/TestEmbeddings';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import heroImage from '@/assets/hero-spiritual.jpg';
 
 interface OnboardingData {
@@ -16,31 +18,151 @@ const Index = () => {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [userData, setUserData] = useState<OnboardingData | null>(null);
   const [currentView, setCurrentView] = useState('scripture');
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [inputUsername, setInputUsername] = useState<string>('');
+  const { toast } = useToast();
 
-  const handleOnboardingComplete = (data: OnboardingData) => {
-    setUserData(data);
-    setIsOnboarded(true);
+  const handleOnboardingComplete = async (data: OnboardingData) => {
+    if (!user) return;
+    
+    try {
+      // Update profile with onboarding data
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          spiritual_tradition: data.tradition,
+          spiritual_goal: data.goal,
+          language: data.language
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setUserData(data);
+      setIsOnboarded(true);
+      toast({
+        title: "تم حفظ بياناتك بنجاح",
+        description: "يمكنك الآن استخدام التطبيق"
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في حفظ البيانات",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleSignOut = () => {
-    localStorage.removeItem('username');
-    setUsername('');
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
     setIsOnboarded(false);
     setUserData(null);
   };
 
-  // Show username input if no username is stored
-  const [username, setUsername] = useState<string>('');
-  const [inputUsername, setInputUsername] = useState<string>('');
-  
-  useEffect(() => {
-    const storedUsername = localStorage.getItem('username');
-    if (storedUsername) {
-      setUsername(storedUsername);
+  const handleUsernameSubmit = async () => {
+    if (!inputUsername.trim()) return;
+
+    try {
+      setLoading(true);
+      
+      // Create anonymous user session and store username in profiles
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously({
+        options: {
+          data: {
+            username: inputUsername.trim(),
+            display_name: inputUsername.trim()
+          }
+        }
+      });
+
+      if (authError) throw authError;
+
+      toast({
+        title: "مرحباً " + inputUsername.trim(),
+        description: "تم إنشاء حسابك بنجاح"
+      });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في إنشاء الحساب",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        loadProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        loadProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  if (!username) {
+  const loadProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) throw error;
+
+      setProfile(profileData);
+      
+      // Check if user has completed onboarding
+      if (profileData.spiritual_tradition && profileData.spiritual_goal && profileData.language) {
+        setUserData({
+          tradition: profileData.spiritual_tradition,
+          goal: profileData.spiritual_goal,
+          language: profileData.language
+        });
+        setIsOnboarded(true);
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-calm flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🕊️</div>
+          <p className="text-muted-foreground">جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
     return (
       <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -57,16 +179,11 @@ const Index = () => {
               dir="rtl"
             />
             <Button 
-              onClick={() => {
-                if (inputUsername.trim()) {
-                  localStorage.setItem('username', inputUsername.trim());
-                  setUsername(inputUsername.trim());
-                }
-              }}
+              onClick={handleUsernameSubmit}
               size="lg"
-              disabled={!inputUsername.trim()}
+              disabled={!inputUsername.trim() || loading}
             >
-              ابدأ الرحلة
+              {loading ? 'جاري الإنشاء...' : 'ابدأ الرحلة'}
             </Button>
           </div>
         </div>
@@ -97,7 +214,7 @@ const Index = () => {
             <div className="text-center max-w-md">
               <div className="text-6xl mb-4">👤</div>
               <h2 className="text-2xl font-bold mb-4">الملف الشخصي</h2>
-              <p className="text-muted-foreground mb-6">مرحباً {username}</p>
+              <p className="text-muted-foreground mb-6">مرحباً {profile?.username || profile?.display_name || 'المستخدم'}</p>
               <Button onClick={handleSignOut} variant="outline">
                 تغيير الاسم
               </Button>
