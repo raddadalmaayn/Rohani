@@ -103,11 +103,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <Heart className="h-5 w-5 mr-2" />
             ابدأ الرحلة الروحية
           </Button>
-
-          {/* Subtitle */}
-          <p className="text-white/60 text-sm mt-6">
-            "وَمَن تَوَكَّلَ عَلَى اللَّهِ فَهُوَ حَسْبُهُ"
-          </p>
         </CardContent>
       </Card>
     </div>
