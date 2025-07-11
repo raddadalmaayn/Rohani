@@ -28,7 +28,7 @@ export function HomeFeed({ language, tradition, goal }: HomeFeedProps) {
   const [showLimiter, setShowLimiter] = useState(false);
   const [isBreathing, setIsBreathing] = useState(false);
 
-  // Mock spiritual video data
+  // Mock spiritual video data - 10 beautiful videos
   const mockVideos: Video[] = [
     {
       id: '1',
@@ -74,6 +74,51 @@ export function HomeFeed({ language, tradition, goal }: HomeFeedProps) {
       thumbnail: '/api/placeholder/400/711',
       duration: '3:00',
       tradition: 'islam'
+    },
+    {
+      id: '6',
+      title: 'أسماء الله الحسنى للسكينة',
+      creator: 'الشيخ أحمد',
+      tags: ['أسماء', 'ذكر', 'سكينة'],
+      thumbnail: '/api/placeholder/400/711',
+      duration: '2:45',
+      tradition: 'islam'
+    },
+    {
+      id: '7',
+      title: 'تأمل غروب الشمس والشكر',
+      creator: 'مرشد التأمل',
+      tags: ['غروب', 'شكر', 'تأمل'],
+      thumbnail: '/api/placeholder/400/711',
+      duration: '1:15',
+      tradition: 'universal'
+    },
+    {
+      id: '8',
+      title: 'دعاء ختم اليوم',
+      creator: 'الداعية سارة',
+      tags: ['دعاء', 'مساء', 'حمد'],
+      thumbnail: '/api/placeholder/400/711',
+      duration: '1:50',
+      tradition: 'islam'
+    },
+    {
+      id: '9',
+      title: 'لحظات صمت في المسجد الحرام',
+      creator: 'الحرمين الشريفين',
+      tags: ['حرم', 'صمت', 'خشوع'],
+      thumbnail: '/api/placeholder/400/711',
+      duration: '4:00',
+      tradition: 'islam'
+    },
+    {
+      id: '10',
+      title: 'كيف تجد السكينة في قلبك',
+      creator: 'د. فاطمة',
+      tags: ['سكينة', 'قلب', 'إرشاد'],
+      thumbnail: '/api/placeholder/400/711',
+      duration: '2:30',
+      tradition: 'universal'
     }
   ];
 
