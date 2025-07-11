@@ -234,45 +234,6 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
               </Card>
             )}
 
-            {/* Scripture Results */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-primary" />
-                النصوص الروحية ذات الصلة
-              </h2>
-              
-              {results.map((scripture) => (
-                <Card key={scripture.id} className="shadow-gentle hover:shadow-spiritual transition-all duration-300">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{getTypeIcon(scripture.text_type)}</span>
-                        <Badge variant="secondary">{getTypeName(scripture.text_type)}</Badge>
-                        {scripture.similarity && (
-                          <Badge variant="outline" className="text-xs">
-                            {Math.round(scripture.similarity * 100)}% تطابق
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {scripture.source_ref}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-lg leading-relaxed text-right mb-3" dir="rtl">
-                      {scripture.text_ar}
-                    </p>
-                    {scripture.chapter_name && (
-                      <div className="text-sm text-muted-foreground">
-                        {scripture.text_type === 'quran' ? 'سورة' : 'كتاب'}: {scripture.chapter_name}
-                        {scripture.verse_number && ` - آية ${scripture.verse_number}`}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
 
             {/* AI Generated Tips */}
             {!isSensitive && practicalTip && (
