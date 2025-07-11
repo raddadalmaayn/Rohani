@@ -3,20 +3,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, BookOpen, Heart, Sparkles } from 'lucide-react';
+import { Search, BookOpen, Heart, Sparkles, AlertTriangle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ScriptureResult {
   id: string;
-  type: 'verse' | 'hadith' | 'text';
   source_ref: string;
-  text: string;
-  tradition: string;
-  highlight?: string;
+  text_ar: string;
+  text_type: 'quran' | 'hadith';
+  chapter_name: string;
+  verse_number: number | null;
+  similarity: number;
 }
 
-interface TipResult {
-  tip_text: string;
-  dua_text: string;
+interface LLMResponse {
+  scriptures: ScriptureResult[];
+  practical_tip: string;
+  dua: string;
+  is_sensitive: boolean;
 }
 
 interface AskScriptureProps {
@@ -28,63 +33,70 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<ScriptureResult[]>([]);
-  const [tipResult, setTipResult] = useState<TipResult | null>(null);
-
-  // Mock scripture data
-  const mockScriptures: ScriptureResult[] = [
-    {
-      id: '1',
-      type: 'verse',
-      source_ref: 'سورة البقرة: 255',
-      text: 'اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ',
-      tradition: 'islam',
-      highlight: 'الحي القيوم'
-    },
-    {
-      id: '2',
-      type: 'hadith',
-      source_ref: 'صحيح البخاري: 6407',
-      text: 'من صلى عليّ صلاة صلى الله عليه بها عشراً',
-      tradition: 'islam',
-      highlight: 'صلى الله عليه'
-    },
-    {
-      id: '3',
-      type: 'text',
-      source_ref: 'الأذكار - النووي',
-      text: 'اللهم أعني على ذكرك وشكرك وحسن عبادتك',
-      tradition: 'islam',
-      highlight: 'ذكرك وشكرك'
-    }
-  ];
+  const [practicalTip, setPracticalTip] = useState<string>('');
+  const [dua, setDua] = useState<string>('');
+  const [isSensitive, setIsSensitive] = useState(false);
+  const { toast } = useToast();
 
   const handleSearch = async () => {
     if (!query.trim()) return;
     
     setIsSearching(true);
+    setResults([]);
+    setPracticalTip('');
+    setDua('');
+    setIsSensitive(false);
     
-    // Simulate API call
-    setTimeout(() => {
-      // Filter results based on tradition
-      const filteredResults = mockScriptures.filter(scripture => 
-        scripture.tradition === tradition || tradition === 'universal'
-      );
+    try {
+      console.log('Calling ask-scripture function with query:', query);
       
-      setResults(filteredResults);
-      
-      // Generate mock tip and dua
-      setTipResult({
-        tip_text: 'تذكر أن الذكر يجلب السكينة للقلب. اجعل لسانك رطباً بذكر الله في كل وقت.',
-        dua_text: 'اللهم اجعل قلبي مطمئناً بذكرك، واجعل لساني رطباً بشكرك.'
+      const { data, error } = await supabase.functions.invoke('ask-scripture', {
+        body: { 
+          query: query.trim(),
+          user_id: (await supabase.auth.getUser()).data.user?.id 
+        }
       });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'حدث خطأ في البحث');
+      }
+
+      const response: LLMResponse = data;
       
+      setResults(response.scriptures || []);
+      setPracticalTip(response.practical_tip || '');
+      setDua(response.dua || '');
+      setIsSensitive(response.is_sensitive || false);
+
+      if (response.scriptures && response.scriptures.length > 0) {
+        toast({
+          title: 'تم العثور على نتائج',
+          description: `وُجدت ${response.scriptures.length} نصوص ذات صلة`,
+        });
+      } else {
+        toast({
+          title: 'لا توجد نتائج',
+          description: 'جرب صياغة السؤال بطريقة أخرى',
+          variant: 'destructive',
+        });
+      }
+      
+    } catch (error) {
+      console.error('Search error:', error);
+      toast({
+        title: 'خطأ في البحث',
+        description: error instanceof Error ? error.message : 'حدث خطأ غير متوقع',
+        variant: 'destructive',
+      });
+    } finally {
       setIsSearching(false);
-    }, 1500);
+    }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'verse':
+      case 'quran':
         return '📖';
       case 'hadith':
         return '💫';
@@ -95,10 +107,10 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
 
   const getTypeName = (type: string) => {
     switch (type) {
-      case 'verse':
-        return 'آية';
+      case 'quran':
+        return 'آية قرآنية';
       case 'hadith':
-        return 'حديث';
+        return 'حديث شريف';
       default:
         return 'نص';
     }
@@ -130,9 +142,16 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
               <Button 
                 onClick={handleSearch} 
                 disabled={isSearching || !query.trim()}
-                variant="spiritual"
+                className="bg-primary hover:bg-primary/90"
               >
-                {isSearching ? 'يبحث...' : 'بحث'}
+                {isSearching ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    جاري البحث...
+                  </div>
+                ) : (
+                  'بحث'
+                )}
               </Button>
             </div>
           </CardContent>
@@ -141,11 +160,25 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
         {/* Results */}
         {results.length > 0 && (
           <div className="space-y-6">
+            {/* Sensitive Topic Warning */}
+            {isSensitive && (
+              <Card className="shadow-gentle border-l-4 border-l-amber-500 bg-amber-50/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    <p className="text-sm text-amber-800">
+                      هذا السؤال يحتاج إلى استشارة أهل العلم المختصين للحصول على فتوى صحيحة.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Scripture Results */}
             <div className="space-y-4">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-primary" />
-                النصوص الروحية
+                النصوص الروحية ذات الصلة
               </h2>
               
               {results.map((scripture) => (
@@ -153,8 +186,13 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{getTypeIcon(scripture.type)}</span>
-                        <Badge variant="secondary">{getTypeName(scripture.type)}</Badge>
+                        <span className="text-xl">{getTypeIcon(scripture.text_type)}</span>
+                        <Badge variant="secondary">{getTypeName(scripture.text_type)}</Badge>
+                        {scripture.similarity && (
+                          <Badge variant="outline" className="text-xs">
+                            {Math.round(scripture.similarity * 100)}% تطابق
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {scripture.source_ref}
@@ -162,14 +200,13 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-lg leading-relaxed text-right" dir="rtl">
-                      {scripture.text}
+                    <p className="text-lg leading-relaxed text-right mb-3" dir="rtl">
+                      {scripture.text_ar}
                     </p>
-                    {scripture.highlight && (
-                      <div className="mt-3">
-                        <Badge variant="outline" className="text-primary">
-                          {scripture.highlight}
-                        </Badge>
+                    {scripture.chapter_name && (
+                      <div className="text-sm text-muted-foreground">
+                        {scripture.text_type === 'quran' ? 'سورة' : 'كتاب'}: {scripture.chapter_name}
+                        {scripture.verse_number && ` - آية ${scripture.verse_number}`}
                       </div>
                     )}
                   </CardContent>
@@ -178,7 +215,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
             </div>
 
             {/* AI Generated Tips */}
-            {tipResult && (
+            {!isSensitive && practicalTip && (
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-secondary" />
@@ -187,13 +224,18 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                 
                 <Card className="shadow-spiritual border-l-4 border-l-primary">
                   <CardContent className="p-6">
-                    <p className="text-lg leading-relaxed text-right mb-4" dir="rtl">
-                      {tipResult.tip_text}
+                    <p className="text-lg leading-relaxed text-right" dir="rtl">
+                      {practicalTip}
                     </p>
                   </CardContent>
                 </Card>
+              </div>
+            )}
 
-                <Card className="shadow-spiritual border-l-4 border-l-secondary">
+            {/* Dua Section */}
+            {!isSensitive && dua && (
+              <div className="space-y-4">
+                <Card className="shadow-spiritual border-l-4 border-l-secondary bg-gradient-to-r from-secondary/5 to-transparent">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Heart className="h-5 w-5 text-secondary" />
@@ -201,13 +243,23 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-lg leading-relaxed text-right text-secondary" dir="rtl">
-                      {tipResult.dua_text}
+                    <p className="text-lg leading-relaxed text-right text-secondary font-medium" dir="rtl">
+                      {dua}
                     </p>
                   </CardContent>
                 </Card>
               </div>
             )}
+            
+            {/* Disclaimer */}
+            <Card className="shadow-gentle bg-muted/50">
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">
+                  <strong>تنبيه مهم:</strong> هذه نصائح عامة وليست فتوى شرعية. 
+                  للاستفسارات الفقهية يُرجى الرجوع إلى أهل العلم المختصين.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -217,9 +269,15 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
             <CardContent className="p-12 text-center">
               <div className="text-6xl mb-4">🌱</div>
               <h3 className="text-xl font-semibold mb-2">ابحث عن الهداية</h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-4">
                 اكتب سؤالك في شريط البحث للحصول على نصوص روحية ونصائح عملية
               </p>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>أمثلة للأسئلة:</p>
+                <p>• "كيف أجد السكينة في قلبي؟"</p>
+                <p>• "ما الذكر المناسب عند الهم؟"</p>
+                <p>• "كيف أثبت على الصلاة؟"</p>
+              </div>
             </CardContent>
           </Card>
         )}
