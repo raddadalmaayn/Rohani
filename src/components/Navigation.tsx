@@ -8,9 +8,7 @@ interface NavigationProps {
 
 export function Navigation({ currentView, onViewChange }: NavigationProps) {
   const navItems = [
-    { id: 'feed', label: 'الرئيسية', icon: Home },
-    { id: 'scripture', label: 'نصوص', icon: Search },
-    { id: 'stats', label: 'إحصائيات', icon: BarChart3 },
+    { id: 'scripture', label: 'الرئيسية', icon: Home },
     { id: 'profile', label: 'الملف', icon: User }
   ];
 
