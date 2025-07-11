@@ -15,8 +15,6 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -112,11 +110,6 @@ const Auth = () => {
           password,
           options: {
             emailRedirectTo: redirectUrl,
-            data: {
-              first_name: firstName,
-              last_name: lastName,
-              display_name: `${firstName} ${lastName}`.trim(),
-            }
           }
         });
 
@@ -240,32 +233,6 @@ const Auth = () => {
 
           {/* Email/Password Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
-            {!isLogin && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">الاسم الأول</Label>
-                  <Input
-                    id="firstName"
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required={!isLogin}
-                    dir="rtl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">الاسم الأخير</Label>
-                  <Input
-                    id="lastName"
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required={!isLogin}
-                    dir="rtl"
-                  />
-                </div>
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="email">البريد الإلكتروني</Label>
