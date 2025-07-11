@@ -59,55 +59,63 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
 
       if (error) {
         console.error('Supabase function error:', error);
+        throw new Error(error.message || 'حدث خطأ في البحث');
+      }
+
+      const response: LLMResponse = data;
+      
+      // If no scriptures found, try generating embeddings first
+      if (!response.scriptures || response.scriptures.length === 0) {
+        console.log('No results found, checking if embeddings exist...');
         
-        // If no results, try generating embeddings first
-        if (error.message?.includes('no results') || error.message?.includes('لا توجد نتائج')) {
-          console.log('No results found, generating embeddings first...');
+        // Check if any embeddings exist
+        const { data: embeddingCheck } = await supabase
+          .from('scripture')
+          .select('embedding')
+          .not('embedding', 'is', null)
+          .limit(1);
+        
+        if (!embeddingCheck || embeddingCheck.length === 0) {
+          console.log('No embeddings found, generating embeddings first...');
           toast({
             title: 'إعداد النظام',
             description: 'جاري إعداد قاعدة البيانات للمرة الأولى، يرجى الانتظار...',
           });
           
           // Generate embeddings
-          await supabase.functions.invoke('generate-embeddings');
+          const { data: embeddingResponse, error: embeddingError } = await supabase.functions.invoke('generate-embeddings');
           
-          // Retry the search
-          const retryResponse = await supabase.functions.invoke('ask-scripture', {
-            body: { 
-              query: query.trim(),
-              user_id: (await supabase.auth.getUser()).data.user?.id 
-            }
-          });
-          
-          if (retryResponse.error) {
-            throw new Error(retryResponse.error.message || 'حدث خطأ في البحث');
-          }
-          
-          const retryData: LLMResponse = retryResponse.data;
-          setResults(retryData.scriptures || []);
-          setPracticalTip(retryData.practical_tip || '');
-          setDua(retryData.dua || '');
-          setIsSensitive(retryData.is_sensitive || false);
-          
-          if (retryData.scriptures && retryData.scriptures.length > 0) {
-            toast({
-              title: 'تم العثور على نتائج',
-              description: `وُجدت ${retryData.scriptures.length} نصوص ذات صلة`,
-            });
+          if (embeddingError) {
+            console.error('Embedding generation error:', embeddingError);
           } else {
-            toast({
-              title: 'لا توجد نتائج',
-              description: 'جرب صياغة السؤال بطريقة أخرى',
-              variant: 'destructive',
+            console.log('Embeddings generated:', embeddingResponse);
+            
+            // Retry the search after a short delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const retryResponse = await supabase.functions.invoke('ask-scripture', {
+              body: { 
+                query: query.trim(),
+                user_id: (await supabase.auth.getUser()).data.user?.id 
+              }
             });
+            
+            if (!retryResponse.error && retryResponse.data?.scriptures?.length > 0) {
+              const retryData: LLMResponse = retryResponse.data;
+              setResults(retryData.scriptures || []);
+              setPracticalTip(retryData.practical_tip || '');
+              setDua(retryData.dua || '');
+              setIsSensitive(retryData.is_sensitive || false);
+              
+              toast({
+                title: 'تم العثور على نتائج',
+                description: `وُجدت ${retryData.scriptures.length} نصوص ذات صلة`,
+              });
+              return;
+            }
           }
-          return;
         }
-        
-        throw new Error(error.message || 'حدث خطأ في البحث');
       }
-
-      const response: LLMResponse = data;
       
       setResults(response.scriptures || []);
       setPracticalTip(response.practical_tip || '');
