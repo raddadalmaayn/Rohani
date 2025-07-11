@@ -61,7 +61,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           input: query,
-          model: 'text-embedding-3-large'
+          model: 'text-embedding-3-small'
         }),
       });
 
