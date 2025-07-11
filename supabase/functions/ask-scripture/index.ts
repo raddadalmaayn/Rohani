@@ -317,6 +317,7 @@ ${context}
     };
     
     console.log('Final response being sent:', JSON.stringify(finalResponse, null, 2));
+    console.log('Response timestamp:', new Date().toISOString());
     
     return new Response(JSON.stringify(finalResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
