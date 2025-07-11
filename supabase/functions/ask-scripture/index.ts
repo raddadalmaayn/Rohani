@@ -236,10 +236,16 @@ ${context}
     // 4. Generate practical advice using GPT (with fallback)
     console.log('Starting GPT generation...');
     console.log('Context for GPT:', context.substring(0, 200) + '...');
+    console.log('OpenAI API Key available:', !!openAIApiKey);
     
     let llmAdvice: LLMResponse;
     
     try {
+      if (!openAIApiKey) {
+        console.error('OpenAI API key is missing');
+        throw new Error('API key missing');
+      }
+
       console.log('Calling OpenAI Chat API...');
       const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -259,40 +265,64 @@ ${context}
       });
 
       console.log('OpenAI API response status:', chatResponse.status);
+      console.log('OpenAI API response headers:', Object.fromEntries(chatResponse.headers.entries()));
       
       if (!chatResponse.ok) {
         const errorText = await chatResponse.text();
-        console.error('OpenAI Chat API error:', errorText);
+        console.error('OpenAI Chat API error response:', errorText);
+        console.error('OpenAI Chat API error status:', chatResponse.status);
         
-        if (errorText.includes('insufficient_quota')) {
+        if (errorText.includes('insufficient_quota') || errorText.includes('quota')) {
           console.log('Quota exceeded, using fallback advice...');
           throw new Error('quota_exceeded');
+        } else if (errorText.includes('model_not_found') || errorText.includes('invalid_request_error')) {
+          console.log('Model or request error, using fallback advice...');
+          throw new Error('model_error');
         } else {
           throw new Error(`OpenAI Chat API error: ${errorText}`);
         }
       }
 
       const chatData = await chatResponse.json();
-      console.log('OpenAI response received:', chatData.choices?.length || 0, 'choices');
+      console.log('OpenAI response received successfully');
+      console.log('Response choices length:', chatData.choices?.length || 0);
+      console.log('Usage tokens:', chatData.usage);
       
+      if (!chatData.choices || chatData.choices.length === 0) {
+        console.error('No choices in OpenAI response:', chatData);
+        throw new Error('No response choices');
+      }
+
       const gptResponse = chatData.choices[0].message.content;
-      console.log('GPT raw response:', gptResponse);
+      console.log('GPT raw response length:', gptResponse?.length || 0);
+      console.log('GPT raw response preview:', gptResponse?.substring(0, 200) + '...');
+
+      if (!gptResponse) {
+        console.error('Empty GPT response');
+        throw new Error('Empty response');
+      }
 
       // Parse JSON response from GPT
       try {
         llmAdvice = JSON.parse(gptResponse);
-        console.log('Successfully parsed GPT response:', llmAdvice);
+        console.log('Successfully parsed GPT response');
+        console.log('Parsed practical_tip length:', llmAdvice.practical_tip?.length || 0);
+        console.log('Parsed dua length:', llmAdvice.dua?.length || 0);
       } catch (parseError) {
         console.error('Failed to parse GPT response as JSON:', gptResponse);
-        console.error('Parse error:', parseError);
+        console.error('Parse error details:', parseError);
         throw new Error('parse_error');
       }
     } catch (gptError) {
-      console.error('GPT generation failed:', gptError);
-      console.log('Using fallback advice...');
+      console.error('GPT generation failed with error:', gptError);
+      console.error('Error type:', gptError.constructor.name);
+      console.error('Error message:', gptError.message);
+      console.log('Using fallback advice for query:', query);
+      
       // Fallback advice based on query content
       llmAdvice = generateFallbackAdvice(query);
-      console.log('Fallback advice generated:', llmAdvice);
+      console.log('Fallback advice generated successfully');
+      console.log('Fallback practical_tip length:', llmAdvice.practical_tip?.length || 0);
     }
 
     // Store query for analytics (optional)
