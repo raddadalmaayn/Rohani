@@ -21,7 +21,6 @@ const Index = () => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [inputUsername, setInputUsername] = useState<string>('');
   const { toast } = useToast();
 
   const handleOnboardingComplete = async (data: OnboardingData) => {
@@ -64,26 +63,17 @@ const Index = () => {
     setUserData(null);
   };
 
-  const handleUsernameSubmit = async () => {
-    if (!inputUsername.trim()) return;
-
+  const createAnonymousUser = async () => {
     try {
       setLoading(true);
       
-      // Create anonymous user session and store username in profiles
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously({
-        options: {
-          data: {
-            username: inputUsername.trim(),
-            display_name: inputUsername.trim()
-          }
-        }
-      });
+      // Create anonymous user session
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
 
       if (authError) throw authError;
 
       toast({
-        title: "مرحباً " + inputUsername.trim(),
+        title: "مرحباً بك",
         description: "تم إنشاء حسابك بنجاح"
       });
     } catch (error) {
@@ -171,29 +161,17 @@ const Index = () => {
   }
 
   if (!user || !profile) {
+    // Auto-create anonymous user if none exists
+    if (!loading) {
+      createAnonymousUser();
+    }
     return (
       <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="text-6xl mb-6">🕊️</div>
           <h1 className="text-3xl font-bold mb-4">روحاني</h1>
           <p className="text-muted-foreground mb-6">دقيقة سكينة… كلما تعب قلبك</p>
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="اكتب اسمك"
-              value={inputUsername}
-              onChange={(e) => setInputUsername(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground text-center"
-              dir="rtl"
-            />
-            <Button 
-              onClick={handleUsernameSubmit}
-              size="lg"
-              disabled={!inputUsername.trim() || loading}
-            >
-              {loading ? 'جاري الإنشاء...' : 'ابدأ الرحلة'}
-            </Button>
-          </div>
+          <p className="text-muted-foreground">جاري إنشاء حسابك...</p>
         </div>
       </div>
     );
