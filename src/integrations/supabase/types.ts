@@ -217,11 +217,13 @@ export type Database = {
         Returns: unknown
       }
       match_scripture: {
-        Args: {
-          query_embedding: string
-          match_count?: number
-          filter_type?: string
-        }
+        Args:
+          | { embedding_input: string; match_count?: number }
+          | {
+              query_embedding: string
+              match_count?: number
+              filter_type?: string
+            }
         Returns: {
           id: string
           source_ref: string

@@ -100,7 +100,7 @@ serve(async (req) => {
       console.log('Vector string format:', vectorString.substring(0, 50) + '...');
       const { data, error: searchError } = await supabase
         .rpc('match_scripture', {
-          query_embedding: vectorString,
+          embedding_input: vectorString,  // Changed parameter name to match function
           match_count: 6
         });
       
