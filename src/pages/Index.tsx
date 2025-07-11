@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { OnboardingFlow } from '@/components/OnboardingFlow';
 import { HomeFeed } from '@/components/HomeFeed';
 import { AskScripture } from '@/components/AskScripture';
@@ -8,7 +6,6 @@ import { TestEmbeddings } from '@/components/TestEmbeddings';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-spiritual.jpg';
-import type { User, Session } from '@supabase/supabase-js';
 
 interface OnboardingData {
   language: string;
@@ -16,109 +13,63 @@ interface OnboardingData {
   goal: string;
 }
 
-interface UserProfile {
-  first_name: string | null;
-  last_name: string | null;
-  display_name: string | null;
-}
-
 const Index = () => {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [userData, setUserData] = useState<OnboardingData | null>(null);
   const [currentView, setCurrentView] = useState('feed');
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  
-  const navigate = useNavigate();
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, display_name')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return;
-      }
-
-      setUserProfile(data);
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
-
-  useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        // Fetch profile when user logs in
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-          }, 0);
-        } else {
-          setUserProfile(null);
-        }
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      // Fetch profile for existing session
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleOnboardingComplete = (data: OnboardingData) => {
     setUserData(data);
     setIsOnboarded(true);
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate('/auth');
+  const handleSignOut = () => {
+    localStorage.removeItem('username');
+    setUsername('');
+    setIsOnboarded(false);
+    setUserData(null);
   };
 
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-calm flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">🕊️</div>
-          <p className="text-muted-foreground">جاري التحميل...</p>
-        </div>
-      </div>
-    );
-  }
+  // Show username input if no username is stored
+  const [username, setUsername] = useState<string>('');
+  const [inputUsername, setInputUsername] = useState<string>('');
+  
+  useEffect(() => {
+    const storedUsername = localStorage.getItem('username');
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+  }, []);
 
-  // Redirect to auth if not authenticated
-  if (!user) {
+  if (!username) {
     return (
       <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <div className="text-6xl mb-6">🕊️</div>
           <h1 className="text-3xl font-bold mb-4">روحاني</h1>
           <p className="text-muted-foreground mb-6">دقيقة سكينة… كلما تعب قلبك</p>
-          <Button onClick={() => navigate('/auth')} size="lg">
-            تسجيل الدخول / إنشاء حساب
-          </Button>
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="اكتب اسمك"
+              value={inputUsername}
+              onChange={(e) => setInputUsername(e.target.value)}
+              className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground text-center"
+              dir="rtl"
+            />
+            <Button 
+              onClick={() => {
+                if (inputUsername.trim()) {
+                  localStorage.setItem('username', inputUsername.trim());
+                  setUsername(inputUsername.trim());
+                }
+              }}
+              size="lg"
+              disabled={!inputUsername.trim()}
+            >
+              ابدأ الرحلة
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -160,15 +111,14 @@ const Index = () => {
           </div>
         );
       case 'profile':
-        const displayName = userProfile?.first_name || userProfile?.display_name || 'المستخدم';
         return (
           <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
             <div className="text-center max-w-md">
               <div className="text-6xl mb-4">👤</div>
               <h2 className="text-2xl font-bold mb-4">الملف الشخصي</h2>
-              <p className="text-muted-foreground mb-6">مرحباً {displayName}</p>
+              <p className="text-muted-foreground mb-6">مرحباً {username}</p>
               <Button onClick={handleSignOut} variant="outline">
-                تسجيل الخروج
+                تغيير الاسم
               </Button>
             </div>
           </div>
