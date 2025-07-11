@@ -41,8 +41,14 @@ serve(async (req) => {
     });
     const { query, user_id } = await req.json();
 
+    console.log('=== DEBUG INFO ===');
     console.log('Processing query:', query);
     console.log('User ID:', user_id);
+    console.log('OpenAI API Key exists:', !!openAIApiKey);
+    console.log('OpenAI API Key first 10 chars:', openAIApiKey?.substring(0, 10) || 'undefined');
+    console.log('Supabase URL exists:', !!supabaseUrl);
+    console.log('Supabase Key exists:', !!supabaseKey);
+    console.log('=== END DEBUG ===');
 
     if (!query || query.trim().length === 0) {
       throw new Error('Query is required');
