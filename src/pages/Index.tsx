@@ -16,15 +16,41 @@ interface OnboardingData {
   goal: string;
 }
 
+interface UserProfile {
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+}
+
 const Index = () => {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [userData, setUserData] = useState<OnboardingData | null>(null);
   const [currentView, setCurrentView] = useState('feed');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   
   const navigate = useNavigate();
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, display_name')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener
@@ -33,6 +59,15 @@ const Index = () => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Fetch profile when user logs in
+        if (session?.user) {
+          setTimeout(() => {
+            fetchUserProfile(session.user.id);
+          }, 0);
+        } else {
+          setUserProfile(null);
+        }
       }
     );
 
@@ -41,6 +76,11 @@ const Index = () => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Fetch profile for existing session
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -120,12 +160,13 @@ const Index = () => {
           </div>
         );
       case 'profile':
+        const displayName = userProfile?.first_name || userProfile?.display_name || 'المستخدم';
         return (
           <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
             <div className="text-center max-w-md">
               <div className="text-6xl mb-4">👤</div>
               <h2 className="text-2xl font-bold mb-4">الملف الشخصي</h2>
-              <p className="text-muted-foreground mb-6">مرحباً {user.email}</p>
+              <p className="text-muted-foreground mb-6">مرحباً {displayName}</p>
               <Button onClick={handleSignOut} variant="outline">
                 تسجيل الخروج
               </Button>
