@@ -17,7 +17,7 @@ interface OnboardingFlowProps {
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const spiritualVerses = [
     "وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا",
-    "وَفِي ذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
+    "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
     "إِنَّ مَعَ الْعُسْرِ يُسْرًا",
     "وَاللَّهُ خَيْرٌ حَافِظًا وَهُوَ أَرْحَمُ الرَّاحِمِينَ"
   ];
