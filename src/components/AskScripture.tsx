@@ -245,9 +245,13 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                 
                 <Card className="shadow-spiritual border-l-4 border-l-primary">
                   <CardContent className="p-6">
-                    <p className="text-lg leading-relaxed text-right" dir="rtl">
-                      {practicalTip}
-                    </p>
+                    <div className="text-lg leading-relaxed text-right whitespace-pre-line" dir="rtl">
+                      {practicalTip.split('\n').map((paragraph, index) => (
+                        <p key={index} className="mb-4 last:mb-0">
+                          {paragraph}
+                        </p>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
