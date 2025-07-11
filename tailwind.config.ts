@@ -63,6 +63,17 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+			backgroundImage: {
+				'gradient-spiritual': 'var(--gradient-spiritual)',
+				'gradient-calm': 'var(--gradient-calm)'
+			},
+			boxShadow: {
+				'spiritual': 'var(--shadow-spiritual)',
+				'gentle': 'var(--shadow-gentle)'
+			},
+			transitionProperty: {
+				'mindful': 'var(--transition-mindful)'
+			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',

@@ -8,35 +8,43 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Rohani spiritual theme - warm, calming colors */
+    --background: 60 20% 98%;          /* rohani-cream #FAFAF7 */
+    --foreground: 0 0% 18%;           /* rohani-charcoal #2E2E2E */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 60 20% 98%;               /* rohani-cream */
+    --card-foreground: 0 0% 18%;      /* rohani-charcoal */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 60 20% 98%;
+    --popover-foreground: 0 0% 18%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 82 47% 34%;            /* rohani-olive #6B8E23 */
+    --primary-foreground: 0 0% 100%;  /* white */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 199 100% 71%;        /* rohani-sky #6EC6FF */
+    --secondary-foreground: 0 0% 18%; /* rohani-charcoal */
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 60 15% 92%;              /* lighter cream */
+    --muted-foreground: 0 0% 45%;     /* softer text */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 199 100% 71%;           /* rohani-sky */
+    --accent-foreground: 0 0% 18%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 60 15% 85%;             /* soft cream border */
+    --input: 60 15% 90%;              /* cream input */
+    --ring: 82 47% 34%;               /* rohani-olive focus */
 
-    --radius: 0.5rem;
+    /* Spiritual design tokens */
+    --gradient-spiritual: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --gradient-calm: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+    --shadow-spiritual: 0 8px 32px -8px hsl(var(--primary) / 0.2);
+    --shadow-gentle: 0 4px 16px -4px hsl(var(--primary) / 0.1);
+    --transition-mindful: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    --radius: 1rem;                  /* 16px for spiritual roundness */
 
     --sidebar-background: 0 0% 98%;
 
