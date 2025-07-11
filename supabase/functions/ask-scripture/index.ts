@@ -9,6 +9,7 @@ const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface ScriptureResult {
@@ -35,7 +36,9 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(supabaseUrl!, supabaseKey!);
+    const supabase = createClient(supabaseUrl!, supabaseKey!, {
+      auth: { persistSession: false }
+    });
     const { query, user_id } = await req.json();
 
     console.log('Processing query:', query);
@@ -46,7 +49,7 @@ serve(async (req) => {
     }
 
     // Check for sensitive religious topics that require scholars
-    const sensitiveTopics = /(?:طلاق|حرام|حلال|فتوى|زكاة|ميراث|أحكام|فقه)/;
+    const sensitiveTopics = /(?:طلاق|حرام|حلال|فتوى|زكاة|ميراث|أحكام|فقه)/i;
     const isSensitiveTopic = sensitiveTopics.test(query);
 
     // 1. Get embedding for the query (with fallback for quota issues)
@@ -95,7 +98,7 @@ serve(async (req) => {
       // Use semantic search with embeddings
       const { data, error: searchError } = await supabase
         .rpc('match_scripture', {
-          query_embedding: queryEmbedding,
+          query_embedding: `[${queryEmbedding.join(',')}]`,
           match_count: 6
         });
       
@@ -113,8 +116,8 @@ serve(async (req) => {
       console.log('Using fallback text search...');
       const { data, error: textSearchError } = await supabase
         .from('scripture')
-        .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
-        .or(`text_ar.ilike.%${query}%,source_ref.ilike.%${query}%,chapter_name.ilike.%${query}%`)
+        .select('id, source_ref, text_ar')
+        .or(`text_ar.ilike.*${query}*,source_ref.ilike.*${query}*`)
         .limit(6);
         
       if (textSearchError) {
@@ -257,7 +260,7 @@ ${context}
     });
 
   } catch (error) {
-    console.error('Error in ask-scripture function:', error);
+    console.error('Error in ask-scripture function:', error?.stack || error);
     return new Response(JSON.stringify({ 
       error: error.message,
       scriptures: [],
