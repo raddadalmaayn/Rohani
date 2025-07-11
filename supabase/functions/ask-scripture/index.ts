@@ -129,40 +129,38 @@ serve(async (req) => {
       console.log('Using fallback text search...');
       console.log('Search query:', query);
       
-      // Try broader search terms - extract keywords and search more leniently
-      const keywords = query.split(/\s+/).filter(word => word.length > 2);
-      console.log('Keywords extracted:', keywords);
+      // Use correct supabase-js v2 syntax for ilike
+      const { data, error: textSearchError } = await supabase
+        .from('scripture')
+        .select('id, source_ref, text_ar')
+        .filter('text_ar', 'ilike', `%${query}%`)
+        .limit(6);
+        
+      console.log('Text search error:', textSearchError);
+      console.log('Text search data:', JSON.stringify(data, null, 2));
+        
+      if (textSearchError) {
+        console.error('Text search error:', textSearchError);
+        scriptures = [];
+      } else {
+        console.log('Text search returned:', data?.length || 0, 'results');
+        scriptures = data?.map(item => ({ ...item, similarity: 0.8 })) || [];
+      }
       
-      let textData = null;
-      
-      // Try searching for each keyword
-      for (const keyword of keywords) {
-        console.log(`Searching for keyword: ${keyword}`);
-        const { data } = await supabase
+      // If still no results, try with common Arabic words
+      if (!scriptures || scriptures.length === 0) {
+        console.log('No direct matches, trying common Arabic words...');
+        const { data: fallbackData } = await supabase
           .from('scripture')
           .select('id, source_ref, text_ar')
-          .ilike('text_ar', `%${keyword}%`)
+          .filter('text_ar', 'ilike', '%الله%')
           .limit(6);
           
-        if (data && data.length > 0) {
-          console.log(`Found ${data.length} results for keyword: ${keyword}`);
-          textData = data;
-          break;
+        if (fallbackData && fallbackData.length > 0) {
+          console.log('Found results with fallback search:', fallbackData.length);
+          scriptures = fallbackData.map(item => ({ ...item, similarity: 0.6 }));
         }
       }
-      
-      // If no keyword matches, return all scriptures
-      if (!textData || textData.length === 0) {
-        console.log('No keyword matches, returning all scriptures');
-        const { data } = await supabase
-          .from('scripture')
-          .select('id, source_ref, text_ar')
-          .limit(6);
-        textData = data || [];
-      }
-      
-      console.log('Final text search results:', textData?.length || 0);
-      scriptures = textData?.map(item => ({ ...item, similarity: 0.8 })) || [];
     }
 
     console.log('Final scriptures count:', scriptures?.length || 0);
