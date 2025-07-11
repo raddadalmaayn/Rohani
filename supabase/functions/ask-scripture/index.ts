@@ -218,9 +218,13 @@ ${context}
 أعطني نصيحة عملية ودعاء مناسب.`;
 
     // 4. Generate practical advice using GPT (with fallback)
+    console.log('Starting GPT generation...');
+    console.log('Context for GPT:', context.substring(0, 200) + '...');
+    
     let llmAdvice: LLMResponse;
     
     try {
+      console.log('Calling OpenAI Chat API...');
       const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -238,6 +242,8 @@ ${context}
         }),
       });
 
+      console.log('OpenAI API response status:', chatResponse.status);
+      
       if (!chatResponse.ok) {
         const errorText = await chatResponse.text();
         console.error('OpenAI Chat API error:', errorText);
@@ -251,21 +257,26 @@ ${context}
       }
 
       const chatData = await chatResponse.json();
+      console.log('OpenAI response received:', chatData.choices?.length || 0, 'choices');
+      
       const gptResponse = chatData.choices[0].message.content;
-
-      console.log('GPT response received');
+      console.log('GPT raw response:', gptResponse);
 
       // Parse JSON response from GPT
       try {
         llmAdvice = JSON.parse(gptResponse);
+        console.log('Successfully parsed GPT response:', llmAdvice);
       } catch (parseError) {
         console.error('Failed to parse GPT response as JSON:', gptResponse);
+        console.error('Parse error:', parseError);
         throw new Error('parse_error');
       }
     } catch (gptError) {
-      console.log('GPT generation failed, using fallback advice...');
+      console.error('GPT generation failed:', gptError);
+      console.log('Using fallback advice...');
       // Fallback advice based on query content
       llmAdvice = generateFallbackAdvice(query);
+      console.log('Fallback advice generated:', llmAdvice);
     }
 
     // Store query for analytics (optional)
