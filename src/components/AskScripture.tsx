@@ -59,6 +59,51 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
 
       if (error) {
         console.error('Supabase function error:', error);
+        
+        // If no results, try generating embeddings first
+        if (error.message?.includes('no results') || error.message?.includes('لا توجد نتائج')) {
+          console.log('No results found, generating embeddings first...');
+          toast({
+            title: 'إعداد النظام',
+            description: 'جاري إعداد قاعدة البيانات للمرة الأولى، يرجى الانتظار...',
+          });
+          
+          // Generate embeddings
+          await supabase.functions.invoke('generate-embeddings');
+          
+          // Retry the search
+          const retryResponse = await supabase.functions.invoke('ask-scripture', {
+            body: { 
+              query: query.trim(),
+              user_id: (await supabase.auth.getUser()).data.user?.id 
+            }
+          });
+          
+          if (retryResponse.error) {
+            throw new Error(retryResponse.error.message || 'حدث خطأ في البحث');
+          }
+          
+          const retryData: LLMResponse = retryResponse.data;
+          setResults(retryData.scriptures || []);
+          setPracticalTip(retryData.practical_tip || '');
+          setDua(retryData.dua || '');
+          setIsSensitive(retryData.is_sensitive || false);
+          
+          if (retryData.scriptures && retryData.scriptures.length > 0) {
+            toast({
+              title: 'تم العثور على نتائج',
+              description: `وُجدت ${retryData.scriptures.length} نصوص ذات صلة`,
+            });
+          } else {
+            toast({
+              title: 'لا توجد نتائج',
+              description: 'جرب صياغة السؤال بطريقة أخرى',
+              variant: 'destructive',
+            });
+          }
+          return;
+        }
+        
         throw new Error(error.message || 'حدث خطأ في البحث');
       }
 
