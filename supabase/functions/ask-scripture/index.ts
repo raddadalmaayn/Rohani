@@ -65,7 +65,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           input: query,
-          model: 'text-embedding-3-small'
+          model: 'text-embedding-ada-002'
         }),
       });
 
@@ -130,7 +130,7 @@ serve(async (req) => {
       const { data, error: textSearchError } = await supabase
         .from('scripture')
         .select('id, source_ref, text_ar')
-        .or(`text_ar.ilike.*${query}*,source_ref.ilike.*${query}*`)
+        .ilike('text_ar', `%${query}%`)
         .limit(6);
         
       if (textSearchError) {
