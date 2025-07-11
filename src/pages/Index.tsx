@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { OnboardingFlow } from '@/components/OnboardingFlow';
 import { HomeFeed } from '@/components/HomeFeed';
 import { AskScripture } from '@/components/AskScripture';
+import { TestEmbeddings } from '@/components/TestEmbeddings';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-spiritual.jpg';
@@ -103,10 +104,13 @@ const Index = () => {
         );
       case 'scripture':
         return (
-          <AskScripture 
-            language={userData.language}
-            tradition={userData.tradition}
-          />
+          <div>
+            <TestEmbeddings />
+            <AskScripture 
+              language={userData.language}
+              tradition={userData.tradition}
+            />
+          </div>
         );
       case 'stats':
         return (
