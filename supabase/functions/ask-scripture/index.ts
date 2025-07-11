@@ -95,21 +95,31 @@ serve(async (req) => {
     
     if (queryEmbedding) {
       console.log('Using semantic search with embeddings...');
+      console.log('Embedding length:', queryEmbedding.length);
+      console.log('First 5 values:', queryEmbedding.slice(0, 5));
+      
       // Use semantic search with embeddings
       const vectorString = '[' + queryEmbedding.join(',') + ']';
-      console.log('Vector string format:', vectorString.substring(0, 50) + '...');
+      console.log('Vector string format:', vectorString.substring(0, 100) + '...');
+      console.log('Vector string length:', vectorString.length);
+      
       const { data, error: searchError } = await supabase
         .rpc('match_scripture', {
           embedding_input: vectorString,  // Changed parameter name to match function
           match_count: 6
         });
       
+      console.log('RPC call completed');
+      console.log('Search error:', searchError);
+      console.log('Search data type:', typeof data);
+      console.log('Search data length:', Array.isArray(data) ? data.length : 'not array');
+      console.log('Search data content:', JSON.stringify(data));
+      
       if (searchError) {
         console.error('Semantic search error:', searchError);
         scriptures = null;
       } else {
         console.log('Semantic search returned:', data?.length || 0, 'results');
-        console.log('SEMANTIC DATA →', JSON.stringify(data, null, 2));
         scriptures = data;
       }
     }
