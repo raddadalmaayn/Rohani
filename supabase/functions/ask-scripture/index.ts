@@ -41,14 +41,8 @@ serve(async (req) => {
     });
     const { query, user_id } = await req.json();
 
-    console.log('=== DEBUG INFO ===');
     console.log('Processing query:', query);
     console.log('User ID:', user_id);
-    console.log('OpenAI API Key exists:', !!openAIApiKey);
-    console.log('OpenAI API Key first 10 chars:', openAIApiKey?.substring(0, 10) || 'undefined');
-    console.log('Supabase URL exists:', !!supabaseUrl);
-    console.log('Supabase Key exists:', !!supabaseKey);
-    console.log('=== END DEBUG ===');
 
     if (!query || query.trim().length === 0) {
       throw new Error('Query is required');
@@ -205,21 +199,18 @@ serve(async (req) => {
     const systemMessage = `أنت مساعد روحي مسلم متخصص. تعطي إجابات شاملة ومفصلة بناء على النصوص الإسلامية الصحيحة فقط.
 
 قوانين مهمة:
-- اكتب practical_tip في 400-600 كلمة، إجابة شاملة ومفصلة وفريدة
-- ضع practical_tip في 5-7 فقرات منفصلة لسهولة القراءة
-- اذكر آيات قرآنية ذات صلة مع الشرح المفصل (إذا توفرت في السياق)
-- اذكر أحاديث شريفة ذات صلة مع التوضيح والتطبيق العملي (إذا توفرت في السياق)
-- أعطي نصائح عملية قابلة للتطبيق ومتنوعة مع أمثلة محددة
-- اشرح الحكمة والمعنى العميق وراء النصوص
-- أضف قصص وأمثلة من السيرة النبوية إذا كانت مناسبة
-- اكتب dua في ≤80 كلمة، دعاء شامل يبدأ بـ"اللهم"
+- اكتب practical_tip في 150-250 كلمة، إجابة شاملة ومفصلة وفريدة
+- ضع practical_tip في 3-4 فقرات منفصلة لسهولة القراءة
+- اذكر آيات قرآنية ذات صلة مع الشرح (إذا توفرت في السياق)
+- اذكر أحاديث شريفة ذات صلة مع التوضيح (إذا توفرت في السياق)
+- أعطي نصائح عملية قابلة للتطبيق ومتنوعة
+- اكتب dua في ≤60 كلمة، دعاء شامل يبدأ بـ"اللهم"
 - لا تعطي أحكام شرعية (لا تقل حلال/حرام)
 - لا تفتي في أمور الدين
 - كن لطيف ومشجع ومفصل
 - استخدم النصوص المعطاة كمرجع أساسي
 - تجنب التكرار واجعل كل إجابة فريدة ومتنوعة
 - ركز على الجوانب العملية والتطبيقية للحياة اليومية
-- اربط النصوص بالواقع المعاصر والتحديات اليومية
 - أرجع إجابة بصيغة JSON فقط:
 {
   "practical_tip": "إجابة شاملة ومفصلة مع فقرات منفصلة...",
@@ -242,16 +233,10 @@ ${context}
     // 4. Generate practical advice using GPT (with fallback)
     console.log('Starting GPT generation...');
     console.log('Context for GPT:', context.substring(0, 200) + '...');
-    console.log('OpenAI API Key length:', openAIApiKey?.length || 'undefined');
     
     let llmAdvice: LLMResponse;
     
     try {
-      if (!openAIApiKey) {
-        console.error('OpenAI API key is missing');
-        throw new Error('API key missing');
-      }
-
       console.log('Calling OpenAI Chat API...');
       const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -266,69 +251,45 @@ ${context}
             { role: 'user', content: userMessage }
           ],
           temperature: 0.7,
-          max_tokens: 1500
+          max_tokens: 800
         }),
       });
 
       console.log('OpenAI API response status:', chatResponse.status);
-      console.log('OpenAI API response headers:', Object.fromEntries(chatResponse.headers.entries()));
       
       if (!chatResponse.ok) {
         const errorText = await chatResponse.text();
-        console.error('OpenAI Chat API error response:', errorText);
-        console.error('OpenAI Chat API error status:', chatResponse.status);
+        console.error('OpenAI Chat API error:', errorText);
         
-        if (errorText.includes('insufficient_quota') || errorText.includes('quota')) {
+        if (errorText.includes('insufficient_quota')) {
           console.log('Quota exceeded, using fallback advice...');
           throw new Error('quota_exceeded');
-        } else if (errorText.includes('model_not_found') || errorText.includes('invalid_request_error')) {
-          console.log('Model or request error, using fallback advice...');
-          throw new Error('model_error');
         } else {
           throw new Error(`OpenAI Chat API error: ${errorText}`);
         }
       }
 
       const chatData = await chatResponse.json();
-      console.log('OpenAI response received successfully');
-      console.log('Response choices length:', chatData.choices?.length || 0);
-      console.log('Usage tokens:', chatData.usage);
+      console.log('OpenAI response received:', chatData.choices?.length || 0, 'choices');
       
-      if (!chatData.choices || chatData.choices.length === 0) {
-        console.error('No choices in OpenAI response:', chatData);
-        throw new Error('No response choices');
-      }
-
       const gptResponse = chatData.choices[0].message.content;
-      console.log('GPT raw response length:', gptResponse?.length || 0);
-      console.log('GPT raw response preview:', gptResponse?.substring(0, 200) + '...');
-
-      if (!gptResponse) {
-        console.error('Empty GPT response');
-        throw new Error('Empty response');
-      }
+      console.log('GPT raw response:', gptResponse);
 
       // Parse JSON response from GPT
       try {
         llmAdvice = JSON.parse(gptResponse);
-        console.log('Successfully parsed GPT response');
-        console.log('Parsed practical_tip length:', llmAdvice.practical_tip?.length || 0);
-        console.log('Parsed dua length:', llmAdvice.dua?.length || 0);
+        console.log('Successfully parsed GPT response:', llmAdvice);
       } catch (parseError) {
         console.error('Failed to parse GPT response as JSON:', gptResponse);
-        console.error('Parse error details:', parseError);
+        console.error('Parse error:', parseError);
         throw new Error('parse_error');
       }
     } catch (gptError) {
-      console.error('GPT generation failed with error:', gptError);
-      console.error('Error type:', gptError.constructor.name);
-      console.error('Error message:', gptError.message);
-      console.log('Using fallback advice for query:', query);
-      
+      console.error('GPT generation failed:', gptError);
+      console.log('Using fallback advice...');
       // Fallback advice based on query content
       llmAdvice = generateFallbackAdvice(query);
-      console.log('Fallback advice generated successfully');
-      console.log('Fallback practical_tip length:', llmAdvice.practical_tip?.length || 0);
+      console.log('Fallback advice generated:', llmAdvice);
     }
 
     // Store query for analytics (optional)
