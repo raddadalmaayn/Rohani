@@ -127,11 +127,18 @@ serve(async (req) => {
     // Fallback to text search if embedding search failed
     if (!scriptures || scriptures.length === 0) {
       console.log('Using fallback text search...');
+      console.log('Search query:', query);
+      
+      // Try multiple text search approaches
       const { data, error: textSearchError } = await supabase
         .from('scripture')
         .select('id, source_ref, text_ar')
-        .ilike('text_ar', `%${query}%`)
+        .or(`text_ar.ilike.%${query}%,source_ref.ilike.%${query}%`)
         .limit(6);
+        
+      console.log('Text search error:', textSearchError);
+      console.log('Text search results:', data?.length || 0);
+      console.log('Text search data:', JSON.stringify(data));
         
       if (textSearchError) {
         console.error('Text search error:', textSearchError);
