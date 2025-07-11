@@ -218,7 +218,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
         </Card>
 
         {/* Results */}
-        {results.length > 0 && (
+        {(practicalTip || dua) && (
           <div className="space-y-6">
             {/* Sensitive Topic Warning */}
             {isSensitive && (
@@ -289,7 +289,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
         )}
 
         {/* Empty State */}
-        {results.length === 0 && !isSearching && (
+        {!practicalTip && !dua && !isSearching && (
           <Card className="shadow-gentle">
             <CardContent className="p-12 text-center">
               <div className="text-6xl mb-4">🌱</div>
