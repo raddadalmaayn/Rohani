@@ -100,8 +100,6 @@ const Index = () => {
         loadProfile(session.user.id);
       } else {
         setLoading(false);
-        // Auto-create anonymous user if no session exists
-        createAnonymousUser();
       }
     });
 
@@ -131,23 +129,32 @@ const Index = () => {
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
-      setProfile(profileData);
-      
-      // Check if user has completed onboarding
-      if (profileData.spiritual_tradition && profileData.spiritual_goal && profileData.language) {
-        setUserData({
-          tradition: profileData.spiritual_tradition,
-          goal: profileData.spiritual_goal,
-          language: profileData.language
-        });
-        setIsOnboarded(true);
+      if (profileData) {
+        setProfile(profileData);
+        
+        // Check if user has completed onboarding
+        if (profileData.spiritual_tradition && profileData.spiritual_goal && profileData.language) {
+          setUserData({
+            tradition: profileData.spiritual_tradition,
+            goal: profileData.spiritual_goal,
+            language: profileData.language
+          });
+          setIsOnboarded(true);
+        }
+      } else {
+        // Profile doesn't exist, user needs to go through onboarding
+        setProfile(null);
+        setIsOnboarded(false);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
+      // Don't show error toast on profile loading issues
+      setProfile(null);
+      setIsOnboarded(false);
     } finally {
       setLoading(false);
     }
