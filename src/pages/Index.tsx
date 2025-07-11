@@ -104,13 +104,10 @@ const Index = () => {
         );
       case 'scripture':
         return (
-          <div>
-            <TestEmbeddings />
-            <AskScripture 
-              language={userData.language}
-              tradition={userData.tradition}
-            />
-          </div>
+          <AskScripture 
+            language={userData.language}
+            tradition={userData.tradition}
+          />
         );
       case 'stats':
         return (
