@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { OnboardingFlow } from '@/components/OnboardingFlow';
 import { HomeFeed } from '@/components/HomeFeed';
 import { AskScripture } from '@/components/AskScripture';
 import { Navigation } from '@/components/Navigation';
+import { Button } from '@/components/ui/button';
 import heroImage from '@/assets/hero-spiritual.jpg';
+import type { User, Session } from '@supabase/supabase-js';
 
 interface OnboardingData {
   language: string;
@@ -15,11 +19,69 @@ const Index = () => {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [userData, setUserData] = useState<OnboardingData | null>(null);
   const [currentView, setCurrentView] = useState('feed');
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleOnboardingComplete = (data: OnboardingData) => {
     setUserData(data);
     setIsOnboarded(true);
   };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-calm flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">🕊️</div>
+          <p className="text-muted-foreground">جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to auth if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="text-6xl mb-6">🕊️</div>
+          <h1 className="text-3xl font-bold mb-4">روحاني</h1>
+          <p className="text-muted-foreground mb-6">دقيقة سكينة… كلما تعب قلبك</p>
+          <Button onClick={() => navigate('/auth')} size="lg">
+            تسجيل الدخول / إنشاء حساب
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Show onboarding if not completed
   if (!isOnboarded) {
@@ -59,10 +121,13 @@ const Index = () => {
       case 'profile':
         return (
           <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
-            <div className="text-center">
+            <div className="text-center max-w-md">
               <div className="text-6xl mb-4">👤</div>
-              <h2 className="text-2xl font-bold mb-2">الملف الشخصي</h2>
-              <p className="text-muted-foreground">إدارة حسابك وإعداداتك</p>
+              <h2 className="text-2xl font-bold mb-4">الملف الشخصي</h2>
+              <p className="text-muted-foreground mb-6">مرحباً {user.email}</p>
+              <Button onClick={handleSignOut} variant="outline">
+                تسجيل الخروج
+              </Button>
             </div>
           </div>
         );
