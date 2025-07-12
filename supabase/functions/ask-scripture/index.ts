@@ -129,38 +129,31 @@ serve(async (req) => {
       console.log('Using fallback text search...');
       console.log('Search query:', query);
       
-      // Use correct supabase-js v2 syntax for ilike
-      const { data, error: textSearchError } = await supabase
-        .from('scripture')
-        .select('id, source_ref, text_ar')
-        .filter('text_ar', 'ilike', `%${query}%`)
-        .limit(6);
-        
-      console.log('Text search error:', textSearchError);
-      console.log('Text search data:', JSON.stringify(data, null, 2));
-        
-      if (textSearchError) {
-        console.error('Text search error:', textSearchError);
-        scriptures = [];
-      } else {
-        console.log('Text search returned:', data?.length || 0, 'results');
-        scriptures = data?.map(item => ({ ...item, similarity: 0.8 })) || [];
-      }
+      // Extract key words from the query for better text search
+      const queryWords = query.trim().split(/\s+/).filter(word => word.length > 2);
+      let searchResults = [];
       
-      // If still no results, try with common Arabic words
-      if (!scriptures || scriptures.length === 0) {
-        console.log('No direct matches, trying common Arabic words...');
-        const { data: fallbackData } = await supabase
+      // Try searching for each meaningful word
+      for (const word of queryWords.slice(0, 3)) { // Limit to first 3 words
+        console.log('Searching for word:', word);
+        const { data } = await supabase
           .from('scripture')
-          .select('id, source_ref, text_ar')
-          .filter('text_ar', 'ilike', '%الله%')
-          .limit(6);
+          .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+          .filter('text_ar', 'ilike', `%${word}%`)
+          .limit(3);
           
-        if (fallbackData && fallbackData.length > 0) {
-          console.log('Found results with fallback search:', fallbackData.length);
-          scriptures = fallbackData.map(item => ({ ...item, similarity: 0.6 }));
+        if (data && data.length > 0) {
+          searchResults.push(...data.map(item => ({ ...item, similarity: 0.7 })));
         }
       }
+      
+      // Remove duplicates based on id
+      const uniqueResults = searchResults.filter((item, index, self) => 
+        index === self.findIndex(t => t.id === item.id)
+      );
+      
+      scriptures = uniqueResults.slice(0, 6); // Limit to 6 results
+      console.log('Text search returned:', scriptures?.length || 0, 'results');
     }
 
     console.log('Final scriptures count:', scriptures?.length || 0);
@@ -196,37 +189,28 @@ serve(async (req) => {
       .map((v: ScriptureResult) => `${v.source_ref}: ${v.text_ar}`)
       .join('\n');
 
-    const systemMessage = `أنت مساعد روحي مسلم متخصص. أجب على كل سؤال بطريقة فريدة ومخصصة حسب السياق المعطى.
+    const systemMessage = `أنت مساعد روحي إسلامي متخصص. مهمتك تقديم نصائح عملية مفيدة وفريدة.
 
-قوانين مهمة:
-- ركز على النصوص المعطاة تحديداً وتجنب التكرار
-- اكتب practical_tip في 150-250 كلمة مخصصة للسؤال المحدد
-- استخدم فقط النصوص المعطاة في السياق - لا تضف نصوص أخرى
-- ابدأ بالإجابة المباشرة على السؤال ثم اشرح من النصوص المتاحة
-- أعطي نصائح عملية قابلة للتطبيق مرتبطة بالسؤال تحديداً
-- اكتب dua مخصص للموضوع في ≤50 كلمة يبدأ بـ"اللهم"
-- لا تعطي أحكام شرعية (لا تقل حلال/حرام)
-- لا تفتي في أمور الدين
-- تجنب استخدام نفس الأحاديث في إجابات مختلفة
-- استخدم النصوص المعطاة كمرجع أساسي فقط
-- أرجع إجابة بصيغة JSON فقط:
+إرشادات مهمة:
+1. لكل سؤال، قدم إجابة مختلفة وفريدة تماماً
+2. اقرأ النصوص المرفقة بعناية - إذا كانت مناسبة للسؤال، استخدمها. إذا لم تكن مناسبة، تجاهلها وقدم نصيحة عامة
+3. ركز على النصائح العملية القابلة للتطبيق في الحياة اليومية (100-150 كلمة)
+4. تجنب تكرار نفس المحتوى أو النصوص في إجابات مختلفة
+5. اجعل كل إجابة فريدة ومخصصة للسؤال المحدد
+6. لا تقدم أحكاماً شرعية أو فتاوى
+
+صيغة الرد JSON:
 {
-  "practical_tip": "إجابة مخصصة للسؤال المحدد باستخدام النصوص المعطاة...",
-  "dua": "اللهم [دعاء مخصص للموضوع]..."
+  "practical_tip": "نصيحة عملية فريدة ومفيدة...",
+  "dua": "دعاء مناسب يبدأ بـ اللهم..."
 }`;
 
-    const userMessage = `سؤال المستخدم: ${query}
+    const userMessage = `السؤال: ${query}
 
-النصوص الدينية ذات الصلة:
+النصوص المرجعية (استخدمها فقط إذا كانت مناسبة للسؤال):
 ${context}
 
-أريد إجابة شاملة ومفصلة تتضمن:
-1. شرح مفصل للموضوع
-2. الاستشهاد بالآيات والأحاديث المذكورة في السياق
-3. نصائح عملية قابلة للتطبيق
-4. دعاء مناسب
-
-يرجى تقسيم الإجابة إلى فقرات واضحة ومنفصلة.`;
+قدم نصيحة عملية فريدة ومفيدة للسؤال، مع دعاء مناسب.`;
 
     // 4. Generate practical advice using GPT (with fallback)
     console.log('Starting GPT generation...');
@@ -248,8 +232,8 @@ ${context}
             { role: 'system', content: systemMessage },
             { role: 'user', content: userMessage }
           ],
-          temperature: 0.7,
-          max_tokens: 800
+          temperature: 0.8,
+          max_tokens: 600
         }),
       });
 
