@@ -11,9 +11,42 @@ import {
   Church
 } from 'lucide-react';
 import { useIslamicCalendar } from '@/hooks/use-islamic-calendar';
-
 export function IslamicCalendarView() {
   const { events, isLoading, getEventsByType } = useIslamicCalendar();
+
+  // Get current Hijri date using simple approximation
+  const getCurrentHijriDate = () => {
+    const today = new Date();
+    
+    // Simple Hijri conversion (approximate)
+    // Hijri epoch starts on July 16, 622 CE
+    const hijriEpoch = new Date(622, 6, 16);
+    const daysSinceEpoch = Math.floor((today.getTime() - hijriEpoch.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Average Hijri year is about 354.367 days
+    const hijriYear = Math.floor(daysSinceEpoch / 354.367) + 1;
+    const dayOfYear = Math.floor(daysSinceEpoch % 354.367);
+    
+    // Simple month calculation (each month approximately 29.5 days)
+    const monthNumber = Math.floor(dayOfYear / 29.5) + 1;
+    const dayOfMonth = Math.floor(dayOfYear % 29.5) + 1;
+    
+    const hijriMonths = [
+      'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني', 'جمادى الأولى', 'جمادى الثانية',
+      'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
+    ];
+    
+    const monthIndex = Math.min(Math.max(monthNumber - 1, 0), 11);
+    
+    return {
+      day: Math.min(dayOfMonth, 30),
+      month: hijriMonths[monthIndex],
+      year: hijriYear,
+      formatted: `${Math.min(dayOfMonth, 30)} ${hijriMonths[monthIndex]} ${hijriYear} هـ`
+    };
+  };
+
+  const currentHijriDate = getCurrentHijriDate();
 
   if (isLoading) {
     return (
@@ -61,7 +94,13 @@ export function IslamicCalendarView() {
             <Calendar className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold font-arabic">التقويم الإسلامي</h1>
           </div>
-          <p className="text-muted-foreground font-arabic">الأحداث والمناسبات الإسلامية المهمة</p>
+          <div className="space-y-2">
+            <p className="text-muted-foreground font-arabic">الأحداث والمناسبات الإسلامية المهمة</p>
+            <div className="bg-primary/10 rounded-lg p-3 mx-auto max-w-md">
+              <p className="text-sm text-muted-foreground font-arabic mb-1">التاريخ الهجري اليوم</p>
+              <p className="text-lg font-semibold text-primary font-arabic">{currentHijriDate.formatted}</p>
+            </div>
+          </div>
         </div>
 
         {/* Events List */}
