@@ -11,6 +11,7 @@ import {
   Church
 } from 'lucide-react';
 import { useIslamicCalendar } from '@/hooks/use-islamic-calendar';
+
 export function IslamicCalendarView() {
   const { events, isLoading, getEventsByType } = useIslamicCalendar();
 
