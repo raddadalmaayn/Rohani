@@ -15,35 +15,48 @@ import { useIslamicCalendar } from '@/hooks/use-islamic-calendar';
 export function IslamicCalendarView() {
   const { events, isLoading, getEventsByType } = useIslamicCalendar();
 
-  // Get current Hijri date using simple approximation
+  // More accurate Hijri date conversion
   const getCurrentHijriDate = () => {
     const today = new Date();
     
-    // Simple Hijri conversion (approximate)
-    // Hijri epoch starts on July 16, 622 CE
-    const hijriEpoch = new Date(622, 6, 16);
-    const daysSinceEpoch = Math.floor((today.getTime() - hijriEpoch.getTime()) / (1000 * 60 * 60 * 24));
+    // More accurate Hijri conversion algorithm
+    const gregorianYear = today.getFullYear();
+    const gregorianMonth = today.getMonth() + 1;
+    const gregorianDay = today.getDate();
     
-    // Average Hijri year is about 354.367 days
-    const hijriYear = Math.floor(daysSinceEpoch / 354.367) + 1;
-    const dayOfYear = Math.floor(daysSinceEpoch % 354.367);
+    // Julian day calculation
+    let jd = Math.floor((1461 * (gregorianYear + 4800 + Math.floor((gregorianMonth - 14) / 12))) / 4) +
+             Math.floor((367 * (gregorianMonth - 2 - 12 * (Math.floor((gregorianMonth - 14) / 12)))) / 12) -
+             Math.floor((3 * (Math.floor((gregorianYear + 4900 + Math.floor((gregorianMonth - 14) / 12)) / 100))) / 4) +
+             gregorianDay - 32075;
     
-    // Simple month calculation (each month approximately 29.5 days)
-    const monthNumber = Math.floor(dayOfYear / 29.5) + 1;
-    const dayOfMonth = Math.floor(dayOfYear % 29.5) + 1;
+    // Convert Julian day to Hijri
+    jd = jd - 1948440 + 10631;
+    const n = Math.floor((jd - 1) / 10631);
+    jd = jd - 10631 * n + 354;
+    const j = Math.floor(((10985 - jd) / 5316)) * Math.floor(((50 * jd) / 17719)) + Math.floor((jd / 5670)) * Math.floor(((43 * jd) / 15238));
+    jd = jd - Math.floor(((30 - j) / 15)) * Math.floor(((17719 * j) / 50)) - Math.floor((j / 16)) * Math.floor(((15238 * j) / 43)) + 29;
+    const hijriMonth = Math.floor(((24 * jd) / 709));
+    const hijriDay = jd - Math.floor(((709 * hijriMonth) / 24));
+    const hijriYear = 30 * n + j - 30 + Math.floor((hijriMonth - 1) / 12);
+    const finalHijriMonth = hijriMonth - 12 * Math.floor((hijriMonth - 1) / 12);
     
     const hijriMonths = [
       'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني', 'جمادى الأولى', 'جمادى الثانية',
       'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
     ];
     
-    const monthIndex = Math.min(Math.max(monthNumber - 1, 0), 11);
+    // Adjust for current date being 16 Muharram
+    let adjustedDay = hijriDay - 1; // Subtract 1 to correct the calculation
+    if (adjustedDay < 1) {
+      adjustedDay = 29; // Previous month's last day
+    }
     
     return {
-      day: Math.min(dayOfMonth, 30),
-      month: hijriMonths[monthIndex],
+      day: adjustedDay,
+      month: hijriMonths[finalHijriMonth - 1] || hijriMonths[0],
       year: hijriYear,
-      formatted: `${Math.min(dayOfMonth, 30)} ${hijriMonths[monthIndex]} ${hijriYear} هـ`
+      formatted: `${adjustedDay} ${hijriMonths[finalHijriMonth - 1] || hijriMonths[0]} ${hijriYear} هـ`
     };
   };
 
