@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bookmark, BookmarkCheck, Heart, Volume2, Share2, Trash2 } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Heart, Share2, Trash2 } from 'lucide-react';
 import { useBookmarks } from '@/hooks/use-bookmarks';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -53,14 +53,6 @@ export function ScriptureCard({
     }
   };
 
-  const speakText = (text: string) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ar-SA';
-      utterance.rate = 0.8;
-      speechSynthesis.speak(utterance);
-    }
-  };
 
   const handleBookmark = async () => {
     if (bookmarkStatus === null) {
@@ -152,14 +144,6 @@ export function ScriptureCard({
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
-            <Button
-              onClick={() => speakText(scripture.text_ar)}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-primary"
-            >
-              <Volume2 className="h-4 w-4" />
-            </Button>
             <Button
               onClick={handleShare}
               variant="ghost"

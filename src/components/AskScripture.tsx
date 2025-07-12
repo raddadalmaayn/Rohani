@@ -3,11 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, BookOpen, Heart, Sparkles, AlertTriangle, Mic, MicOff, Volume2 } from 'lucide-react';
+import { Search, BookOpen, Heart, Sparkles, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SearchLoadingSkeleton } from '@/components/ui/loading-skeleton';
-import { useVoiceSearch } from '@/hooks/use-voice-search';
 import { SearchWithHistory } from '@/components/SearchWithHistory';
 import { useSearchHistory } from '@/hooks/use-search-history';
 import { useUserProgress } from '@/hooks/use-user-progress';
@@ -42,7 +41,6 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
   const [dua, setDua] = useState<string>('');
   const [isSensitive, setIsSensitive] = useState(false);
   const { toast } = useToast();
-  const { isListening, isProcessing, startListening, stopListening } = useVoiceSearch();
   const { saveSearch } = useSearchHistory();
   const { updateProgress } = useUserProgress();
 
@@ -166,27 +164,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
     }
   };
 
-  const handleVoiceSearch = async () => {
-    if (isListening) {
-      const transcribedText = await stopListening();
-      if (transcribedText) {
-        setQuery(transcribedText);
-        // Auto-search after voice input
-        setTimeout(() => handleSearch(), 500);
-      }
-    } else {
-      startListening();
-    }
-  };
 
-  const speakText = (text: string) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ar-SA';
-      utterance.rate = 0.8;
-      speechSynthesis.speak(utterance);
-    }
-  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -227,37 +205,6 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
           isSearching={isSearching}
         />
 
-        {/* Voice Search Button */}
-        <Card className="mb-8 shadow-gentle">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-center">
-              <Button
-                onClick={handleVoiceSearch}
-                disabled={isSearching || isProcessing}
-                variant={isListening ? "destructive" : "outline"}
-                size="lg"
-                className="font-arabic"
-              >
-                {isProcessing ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                    جاري المعالجة...
-                  </div>
-                ) : isListening ? (
-                  <div className="flex items-center gap-2">
-                    <MicOff className="h-4 w-4" />
-                    إيقاف التسجيل
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Mic className="h-4 w-4" />
-                    البحث بالصوت
-                  </div>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Loading State */}
         {isSearching && <SearchLoadingSkeleton />}
@@ -290,16 +237,6 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                 
                 <Card className="shadow-spiritual border-l-4 border-l-primary">
                   <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <Button
-                        onClick={() => speakText(practicalTip)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-primary"
-                      >
-                        <Volume2 className="h-4 w-4" />
-                      </Button>
-                    </div>
                     <div className="text-lg leading-relaxed text-right whitespace-pre-line font-arabic" dir="rtl">
                       {practicalTip.split('\n').map((paragraph, index) => (
                         <p key={index} className="mb-4 last:mb-0">
@@ -322,14 +259,6 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                         <Heart className="h-5 w-5 text-secondary" />
                         دعاء مقترح
                       </div>
-                      <Button
-                        onClick={() => speakText(dua)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-secondary"
-                      >
-                        <Volume2 className="h-4 w-4" />
-                      </Button>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
