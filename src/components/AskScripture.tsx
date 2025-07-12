@@ -8,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SearchLoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { useVoiceSearch } from '@/hooks/use-voice-search';
+import { SearchWithHistory } from '@/components/SearchWithHistory';
+import { useSearchHistory } from '@/hooks/use-search-history';
 
 interface ScriptureResult {
   id: string;
@@ -40,6 +42,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
   const [isSensitive, setIsSensitive] = useState(false);
   const { toast } = useToast();
   const { isListening, isProcessing, startListening, stopListening } = useVoiceSearch();
+  const { saveSearch } = useSearchHistory();
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -132,6 +135,9 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
       setDua(response.dua || '');
       setIsSensitive(response.is_sensitive || false);
 
+      // Save search to history
+      await saveSearch(query.trim(), response.scriptures?.length || 0);
+
       if (response.scriptures && response.scriptures.length > 0) {
         toast({
           title: 'تم العثور على نتائج',
@@ -211,46 +217,39 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
         </div>
 
         {/* Search Bar */}
+        <SearchWithHistory
+          onSearch={handleSearch}
+          currentQuery={query}
+          onQueryChange={setQuery}
+          isSearching={isSearching}
+        />
+
+        {/* Voice Search Button */}
         <Card className="mb-8 shadow-gentle">
-          <CardContent className="p-6">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="اكتب سؤالك... مثل: كيف أجد السكينة؟"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="pl-10 font-arabic"
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                />
-              </div>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-center">
               <Button
                 onClick={handleVoiceSearch}
                 disabled={isSearching || isProcessing}
-                variant="outline"
-                size="icon"
-                className={`transition-colors ${isListening ? 'bg-red-100 border-red-300 text-red-600' : ''}`}
+                variant={isListening ? "destructive" : "outline"}
+                size="lg"
+                className="font-arabic"
               >
                 {isProcessing ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-                ) : isListening ? (
-                  <MicOff className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </Button>
-              <Button 
-                onClick={handleSearch} 
-                disabled={isSearching || !query.trim()}
-                className="bg-primary hover:bg-primary/90"
-              >
-                {isSearching ? (
                   <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    جاري البحث...
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                    جاري المعالجة...
+                  </div>
+                ) : isListening ? (
+                  <div className="flex items-center gap-2">
+                    <MicOff className="h-4 w-4" />
+                    إيقاف التسجيل
                   </div>
                 ) : (
-                  'بحث'
+                  <div className="flex items-center gap-2">
+                    <Mic className="h-4 w-4" />
+                    البحث بالصوت
+                  </div>
                 )}
               </Button>
             </div>

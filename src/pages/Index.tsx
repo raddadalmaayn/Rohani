@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { OnboardingFlow } from '@/components/OnboardingFlow';
 import { AskScripture } from '@/components/AskScripture';
+import { BookmarksView } from '@/components/BookmarksView';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -44,14 +45,16 @@ const Index = () => {
             tradition={userData.tradition}
           />
         );
+      case 'bookmarks':
+        return <BookmarksView />;
       case 'profile':
         return (
           <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
             <div className="text-center max-w-md">
               <div className="text-6xl mb-4">👤</div>
-              <h2 className="text-2xl font-bold mb-4">الملف الشخصي</h2>
-              <p className="text-muted-foreground mb-6">مرحباً بك في روحاني</p>
-              <Button onClick={handleSignOut} variant="outline">
+              <h2 className="text-2xl font-bold mb-4 font-arabic">الملف الشخصي</h2>
+              <p className="text-muted-foreground mb-6 font-arabic">مرحباً بك في روحاني</p>
+              <Button onClick={handleSignOut} variant="outline" className="font-arabic">
                 إعادة بدء التطبيق
               </Button>
             </div>
