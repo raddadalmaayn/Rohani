@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, BookOpen, Heart, Sparkles, AlertTriangle, Mic, MicOff, Volume2 } from 'lucide-react';
+import { Search, BookOpen, Heart, Sparkles, AlertTriangle, Mic, MicOff, Volume2, Bookmark, BookmarkCheck, Share2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { SearchLoadingSkeleton } from '@/components/ui/loading-skeleton';
@@ -11,6 +11,8 @@ import { useVoiceSearch } from '@/hooks/use-voice-search';
 import { SearchWithHistory } from '@/components/SearchWithHistory';
 import { useSearchHistory } from '@/hooks/use-search-history';
 import { useUserProgress } from '@/hooks/use-user-progress';
+import { useBookmarks } from '@/hooks/use-bookmarks';
+import { ScriptureCard } from '@/components/ScriptureCard';
 
 interface ScriptureResult {
   id: string;
@@ -45,6 +47,8 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
   const { isListening, isProcessing, startListening, stopListening } = useVoiceSearch();
   const { saveSearch } = useSearchHistory();
   const { updateProgress } = useUserProgress();
+  const { addBookmark, isBookmarked } = useBookmarks();
+  const [duaBookmarkStatus, setDuaBookmarkStatus] = useState<boolean>(false);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -210,6 +214,71 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
     }
   };
 
+  // Handle dua bookmark
+  const handleDuaBookmark = async () => {
+    if (!dua) return;
+    
+    // Create a temporary scripture object for the dua
+    const duaScripture = {
+      id: `dua_${Date.now()}`, // Temporary ID for dua
+      source_ref: 'دعاء مقترح',
+      text_ar: dua,
+      text_type: 'dua' as any,
+      chapter_name: null,
+      verse_number: null
+    };
+
+    try {
+      // For dua, we'll add it to bookmarks as a special type
+      const success = await addBookmark(duaScripture.id, 'دعاء مقترح من البحث');
+      if (success) {
+        setDuaBookmarkStatus(true);
+        toast({
+          title: 'تم حفظ الدعاء',
+          description: 'تم إضافة الدعاء إلى المفضلة',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'خطأ في الحفظ',
+        description: 'لم نتمكن من حفظ الدعاء',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handle sharing dua
+  const handleShareDua = async () => {
+    if (!dua) return;
+    
+    const shareText = `${dua}\n\n- دعاء مقترح`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'دعاء مقترح',
+          text: shareText,
+        });
+      } catch (error) {
+        console.log('Share cancelled');
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        toast({
+          title: 'تم النسخ',
+          description: 'تم نسخ الدعاء إلى الحافظة',
+        });
+      } catch (error) {
+        toast({
+          title: 'خطأ في النسخ',
+          description: 'لم نتمكن من نسخ الدعاء',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-calm p-4">
       <div className="max-w-2xl mx-auto">
@@ -322,14 +391,36 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                         <Heart className="h-5 w-5 text-secondary" />
                         دعاء مقترح
                       </div>
-                      <Button
-                        onClick={() => speakText(dua)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-secondary"
-                      >
-                        <Volume2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          onClick={handleDuaBookmark}
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-secondary"
+                        >
+                          {duaBookmarkStatus ? (
+                            <BookmarkCheck className="h-4 w-4" />
+                          ) : (
+                            <Bookmark className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => speakText(dua)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-secondary"
+                        >
+                          <Volume2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={handleShareDua}
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-secondary"
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -352,7 +443,25 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
             </Card>
           </div>
         )}
-
+            
+            {/* Scripture Results */}
+            {results.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  النصوص ذات الصلة
+                </h2>
+                <div className="space-y-4">
+                  {results.map((scripture) => (
+                    <ScriptureCard
+                      key={scripture.id}
+                      scripture={scripture}
+                      showBookmarkButton={true}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
         {/* Empty State */}
         {!practicalTip && !dua && !isSearching && (
           <Card className="shadow-gentle">
