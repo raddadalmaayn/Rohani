@@ -129,31 +129,64 @@ serve(async (req) => {
       console.log('Using fallback text search...');
       console.log('Search query:', query);
       
-      // Extract key words from the query for better text search
-      const queryWords = query.trim().split(/\s+/).filter(word => word.length > 2);
-      let searchResults = [];
+      // First try direct search on the full query
+      const { data, error: textSearchError } = await supabase
+        .from('scripture')
+        .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+        .filter('text_ar', 'ilike', `%${query}%`)
+        .limit(6);
+        
+      console.log('Direct text search error:', textSearchError);
+      console.log('Direct text search results:', data?.length || 0);
       
-      // Try searching for each meaningful word
-      for (const word of queryWords.slice(0, 3)) { // Limit to first 3 words
-        console.log('Searching for word:', word);
-        const { data } = await supabase
-          .from('scripture')
-          .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
-          .filter('text_ar', 'ilike', `%${word}%`)
-          .limit(3);
-          
-        if (data && data.length > 0) {
-          searchResults.push(...data.map(item => ({ ...item, similarity: 0.7 })));
+      if (textSearchError) {
+        console.error('Text search error:', textSearchError);
+        scriptures = [];
+      } else if (data && data.length > 0) {
+        scriptures = data.map(item => ({ ...item, similarity: 0.8 }));
+        console.log('Direct text search successful:', scriptures.length, 'results');
+      } else {
+        // If no direct match, try searching for individual meaningful words
+        const queryWords = query.trim().split(/\s+/).filter(word => word.length > 2);
+        console.log('Extracted words for search:', queryWords);
+        
+        for (const word of queryWords.slice(0, 3)) {
+          console.log('Searching for word:', word);
+          const { data: wordData } = await supabase
+            .from('scripture')
+            .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+            .filter('text_ar', 'ilike', `%${word}%`)
+            .limit(2);
+            
+          if (wordData && wordData.length > 0) {
+            console.log('Found results for word', word, ':', wordData.length);
+            if (!scriptures) scriptures = [];
+            scriptures.push(...wordData.map(item => ({ ...item, similarity: 0.6 })));
+          }
+        }
+        
+        // Remove duplicates
+        if (scriptures && scriptures.length > 0) {
+          const uniqueResults = scriptures.filter((item, index, self) => 
+            index === self.findIndex(t => t.id === item.id)
+          );
+          scriptures = uniqueResults.slice(0, 6);
+          console.log('Word search completed:', scriptures.length, 'unique results');
+        } else {
+          console.log('No word matches found, trying fallback...');
+          // Last resort fallback
+          const { data: fallbackData } = await supabase
+            .from('scripture')
+            .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+            .filter('text_ar', 'ilike', '%الله%')
+            .limit(3);
+            
+          if (fallbackData && fallbackData.length > 0) {
+            console.log('Fallback search successful:', fallbackData.length);
+            scriptures = fallbackData.map(item => ({ ...item, similarity: 0.5 }));
+          }
         }
       }
-      
-      // Remove duplicates based on id
-      const uniqueResults = searchResults.filter((item, index, self) => 
-        index === self.findIndex(t => t.id === item.id)
-      );
-      
-      scriptures = uniqueResults.slice(0, 6); // Limit to 6 results
-      console.log('Text search returned:', scriptures?.length || 0, 'results');
     }
 
     console.log('Final scriptures count:', scriptures?.length || 0);
