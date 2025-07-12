@@ -3,6 +3,7 @@ import { OnboardingFlow } from '@/components/OnboardingFlow';
 import { AskScripture } from '@/components/AskScripture';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import heroImage from '@/assets/hero-spiritual.jpg';
 
 interface OnboardingData {
@@ -70,8 +71,11 @@ const Index = () => {
       >
         <div className="absolute inset-0 bg-primary/20" />
         <div className="absolute bottom-4 left-4 text-white">
-          <h1 className="text-2xl font-bold">روحاني</h1>
-          <p className="text-white/90">دقيقة سكينة… كلما تعب قلبك</p>
+          <h1 className="text-2xl font-bold font-arabic">روحاني</h1>
+          <p className="text-white/90 font-arabic">دقيقة سكينة… كلما تعب قلبك</p>
+        </div>
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
         </div>
       </div>
 

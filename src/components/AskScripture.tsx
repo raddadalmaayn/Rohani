@@ -3,9 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, BookOpen, Heart, Sparkles, AlertTriangle } from 'lucide-react';
+import { Search, BookOpen, Heart, Sparkles, AlertTriangle, Mic, MicOff, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { SearchLoadingSkeleton } from '@/components/ui/loading-skeleton';
+import { useVoiceSearch } from '@/hooks/use-voice-search';
 
 interface ScriptureResult {
   id: string;
@@ -37,6 +39,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
   const [dua, setDua] = useState<string>('');
   const [isSensitive, setIsSensitive] = useState(false);
   const { toast } = useToast();
+  const { isListening, isProcessing, startListening, stopListening } = useVoiceSearch();
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -154,6 +157,28 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
     }
   };
 
+  const handleVoiceSearch = async () => {
+    if (isListening) {
+      const transcribedText = await stopListening();
+      if (transcribedText) {
+        setQuery(transcribedText);
+        // Auto-search after voice input
+        setTimeout(() => handleSearch(), 500);
+      }
+    } else {
+      startListening();
+    }
+  };
+
+  const speakText = (text: string) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ar-SA';
+      utterance.rate = 0.8;
+      speechSynthesis.speak(utterance);
+    }
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'quran':
@@ -195,10 +220,25 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                   placeholder="اكتب سؤالك... مثل: كيف أجد السكينة؟"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 font-arabic"
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 />
               </div>
+              <Button
+                onClick={handleVoiceSearch}
+                disabled={isSearching || isProcessing}
+                variant="outline"
+                size="icon"
+                className={`transition-colors ${isListening ? 'bg-red-100 border-red-300 text-red-600' : ''}`}
+              >
+                {isProcessing ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                ) : isListening ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
               <Button 
                 onClick={handleSearch} 
                 disabled={isSearching || !query.trim()}
@@ -217,8 +257,11 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
           </CardContent>
         </Card>
 
+        {/* Loading State */}
+        {isSearching && <SearchLoadingSkeleton />}
+
         {/* Results */}
-        {(practicalTip || dua) && (
+        {!isSearching && (practicalTip || dua) && (
           <div className="space-y-6">
             {/* Sensitive Topic Warning */}
             {isSensitive && (
@@ -245,7 +288,17 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
                 
                 <Card className="shadow-spiritual border-l-4 border-l-primary">
                   <CardContent className="p-6">
-                    <div className="text-lg leading-relaxed text-right whitespace-pre-line" dir="rtl">
+                    <div className="flex justify-between items-start mb-4">
+                      <Button
+                        onClick={() => speakText(practicalTip)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-primary"
+                      >
+                        <Volume2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="text-lg leading-relaxed text-right whitespace-pre-line font-arabic" dir="rtl">
                       {practicalTip.split('\n').map((paragraph, index) => (
                         <p key={index} className="mb-4 last:mb-0">
                           {paragraph}
@@ -262,13 +315,23 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
               <div className="space-y-4">
                 <Card className="shadow-spiritual border-l-4 border-l-secondary bg-gradient-to-r from-secondary/5 to-transparent">
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Heart className="h-5 w-5 text-secondary" />
-                      دعاء مقترح
+                    <CardTitle className="flex items-center justify-between text-lg">
+                      <div className="flex items-center gap-2">
+                        <Heart className="h-5 w-5 text-secondary" />
+                        دعاء مقترح
+                      </div>
+                      <Button
+                        onClick={() => speakText(dua)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-secondary"
+                      >
+                        <Volume2 className="h-4 w-4" />
+                      </Button>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-lg leading-relaxed text-right text-secondary font-medium" dir="rtl">
+                    <p className="text-lg leading-relaxed text-right text-secondary font-medium font-quran" dir="rtl">
                       {dua}
                     </p>
                   </CardContent>
