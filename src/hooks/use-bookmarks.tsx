@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useUserProgress } from '@/hooks/use-user-progress';
 
 interface Bookmark {
   id: string;
@@ -20,6 +21,7 @@ export function useBookmarks() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { updateProgress } = useUserProgress();
 
   const fetchBookmarks = async () => {
     setIsLoading(true);
@@ -82,6 +84,7 @@ export function useBookmarks() {
         description: 'تم إضافة النص إلى المفضلة',
       });
 
+      await updateProgress(0, 1);
       await fetchBookmarks();
       return true;
     } catch (error: any) {

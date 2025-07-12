@@ -49,6 +49,84 @@ export type Database = {
           },
         ]
       }
+      daily_reminders: {
+        Row: {
+          content: string
+          created_at: string
+          days_of_week: number[]
+          id: string
+          is_active: boolean | null
+          reminder_type: string
+          scheduled_time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          days_of_week: number[]
+          id?: string
+          is_active?: boolean | null
+          reminder_type: string
+          scheduled_time: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          days_of_week?: number[]
+          id?: string
+          is_active?: boolean | null
+          reminder_type?: string
+          scheduled_time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      islamic_events: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_name: string
+          event_type: string
+          gregorian_date: string | null
+          hijri_date: string
+          id: string
+          is_recurring: boolean | null
+          recommended_actions: string[] | null
+          related_verses: string[] | null
+          significance: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_name: string
+          event_type: string
+          gregorian_date?: string | null
+          hijri_date: string
+          id?: string
+          is_recurring?: boolean | null
+          recommended_actions?: string[] | null
+          related_verses?: string[] | null
+          significance?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_name?: string
+          event_type?: string
+          gregorian_date?: string | null
+          hijri_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          recommended_actions?: string[] | null
+          related_verses?: string[] | null
+          significance?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -214,6 +292,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_progress: {
+        Row: {
+          created_at: string
+          experience_points: number | null
+          favorite_topics: string[] | null
+          id: string
+          last_activity_date: string | null
+          spiritual_level: number | null
+          streak_days: number | null
+          total_bookmarks: number | null
+          total_searches: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          experience_points?: number | null
+          favorite_topics?: string[] | null
+          id?: string
+          last_activity_date?: string | null
+          spiritual_level?: number | null
+          streak_days?: number | null
+          total_bookmarks?: number | null
+          total_searches?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          experience_points?: number | null
+          favorite_topics?: string[] | null
+          id?: string
+          last_activity_date?: string | null
+          spiritual_level?: number | null
+          streak_days?: number | null
+          total_bookmarks?: number | null
+          total_searches?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -311,6 +431,15 @@ export type Database = {
       sparsevec_typmod_in: {
         Args: { "": unknown[] }
         Returns: number
+      }
+      update_user_progress: {
+        Args: {
+          p_user_id: string
+          p_search_increment?: number
+          p_bookmark_increment?: number
+          p_topic?: string
+        }
+        Returns: undefined
       }
       vector_avg: {
         Args: { "": number[] }

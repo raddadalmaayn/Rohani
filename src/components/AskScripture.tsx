@@ -10,6 +10,7 @@ import { SearchLoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { useVoiceSearch } from '@/hooks/use-voice-search';
 import { SearchWithHistory } from '@/components/SearchWithHistory';
 import { useSearchHistory } from '@/hooks/use-search-history';
+import { useUserProgress } from '@/hooks/use-user-progress';
 
 interface ScriptureResult {
   id: string;
@@ -43,6 +44,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
   const { toast } = useToast();
   const { isListening, isProcessing, startListening, stopListening } = useVoiceSearch();
   const { saveSearch } = useSearchHistory();
+  const { updateProgress } = useUserProgress();
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -135,8 +137,9 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
       setDua(response.dua || '');
       setIsSensitive(response.is_sensitive || false);
 
-      // Save search to history
+      // Save search to history and update progress
       await saveSearch(query.trim(), response.scriptures?.length || 0);
+      await updateProgress(1, 0, query.trim());
 
       if (response.scriptures && response.scriptures.length > 0) {
         toast({
