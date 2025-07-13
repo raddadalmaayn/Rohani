@@ -292,39 +292,6 @@ export type Database = {
         }
         Relationships: []
       }
-      surahs: {
-        Row: {
-          ayah_count: number
-          created_at: string
-          id: number
-          name_ar: string
-          name_en: string
-          revelation_order: number | null
-          revelation_place: string | null
-          updated_at: string
-        }
-        Insert: {
-          ayah_count: number
-          created_at?: string
-          id: number
-          name_ar: string
-          name_en: string
-          revelation_order?: number | null
-          revelation_place?: string | null
-          updated_at?: string
-        }
-        Update: {
-          ayah_count?: number
-          created_at?: string
-          id?: number
-          name_ar?: string
-          name_en?: string
-          revelation_order?: number | null
-          revelation_place?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       user_progress: {
         Row: {
           created_at: string
@@ -366,47 +333,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      verses: {
-        Row: {
-          ayah_number: number
-          created_at: string
-          embedding: string | null
-          id: number
-          surah_id: number
-          text_ar: string
-          text_en: string | null
-          updated_at: string
-        }
-        Insert: {
-          ayah_number: number
-          created_at?: string
-          embedding?: string | null
-          id?: number
-          surah_id: number
-          text_ar: string
-          text_en?: string | null
-          updated_at?: string
-        }
-        Update: {
-          ayah_number?: number
-          created_at?: string
-          embedding?: string | null
-          id?: number
-          surah_id?: number
-          text_ar?: string
-          text_en?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "verses_surah_id_fkey"
-            columns: ["surah_id"]
-            isOneToOne: false
-            referencedRelation: "surahs"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
@@ -491,23 +417,6 @@ export type Database = {
           text_type: string
           chapter_name: string
           verse_number: number
-          similarity: number
-        }[]
-      }
-      match_verses: {
-        Args: {
-          query_embedding: string
-          match_count?: number
-          filter_surah_id?: number
-        }
-        Returns: {
-          id: number
-          surah_id: number
-          ayah_number: number
-          text_ar: string
-          text_en: string
-          surah_name_ar: string
-          surah_name_en: string
           similarity: number
         }[]
       }

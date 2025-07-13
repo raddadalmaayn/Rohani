@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Home, Book, MessageSquare, User } from 'lucide-react';
+import { Home, Search, BarChart3, User, Heart, Calendar, TrendingUp } from 'lucide-react';
 
 interface NavigationProps {
   currentView: string;
@@ -9,9 +9,10 @@ interface NavigationProps {
 export function Navigation({ currentView, onViewChange }: NavigationProps) {
   const navItems = [
     { id: 'scripture', label: 'الرئيسية', icon: Home },
-    { id: 'quran', label: 'المصحف', icon: Book },
-    { id: 'ask', label: 'اسأل القرآن', icon: MessageSquare },
-    { id: 'profile', label: 'حسابي', icon: User }
+    { id: 'bookmarks', label: 'المفضلة', icon: Heart },
+    { id: 'dashboard', label: 'إحصائيات', icon: TrendingUp },
+    { id: 'calendar', label: 'التقويم', icon: Calendar },
+    { id: 'profile', label: 'الملف', icon: User }
   ];
 
   return (
