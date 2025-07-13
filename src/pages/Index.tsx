@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { OnboardingFlow } from '@/components/OnboardingFlow';
+import { initializeQuranData } from '@/utils/initializeQuran';
 import { AskScripture } from '@/components/AskScripture';
-import { BookmarksView } from '@/components/BookmarksView';
-import { UserDashboard } from '@/components/UserDashboard';
-import { IslamicCalendarView } from '@/components/IslamicCalendarView';
+import { QuranPage } from '@/components/QuranPage';
+import { HomeFeed } from '@/components/HomeFeed';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -19,6 +19,11 @@ const Index = () => {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [userData, setUserData] = useState<OnboardingData | null>(null);
   const [currentView, setCurrentView] = useState('scripture');
+
+  // Initialize Quran data on app load
+  useEffect(() => {
+    initializeQuranData();
+  }, []);
 
   const handleOnboardingComplete = (data: OnboardingData) => {
     setUserData(data);
@@ -42,17 +47,21 @@ const Index = () => {
     switch (currentView) {
       case 'scripture':
         return (
+          <HomeFeed 
+            language={userData.language}
+            tradition={userData.tradition}
+            goal={userData.goal}
+          />
+        );
+      case 'quran':
+        return <QuranPage />;
+      case 'ask':
+        return (
           <AskScripture 
             language={userData.language}
             tradition={userData.tradition}
           />
         );
-      case 'bookmarks':
-        return <BookmarksView />;
-      case 'dashboard':
-        return <UserDashboard />;
-      case 'calendar':
-        return <IslamicCalendarView />;
       case 'profile':
         return (
           <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">

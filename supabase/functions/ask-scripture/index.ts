@@ -129,10 +129,16 @@ serve(async (req) => {
       console.log('Using fallback text search...');
       console.log('Search query:', query);
       
-      // First try direct search on the full query
+      // First try direct search on verses table
       const { data, error: textSearchError } = await supabase
-        .from('scripture')
-        .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+        .from('verses')
+        .select(`
+          id,
+          surah_id,
+          ayah_number,
+          text_ar,
+          surahs!inner(name_ar, name_en)
+        `)
         .filter('text_ar', 'ilike', `%${query}%`)
         .limit(6);
         
@@ -143,7 +149,16 @@ serve(async (req) => {
         console.error('Text search error:', textSearchError);
         scriptures = [];
       } else if (data && data.length > 0) {
-        scriptures = data.map(item => ({ ...item, similarity: 0.8 }));
+        // Map verses to scripture format
+        scriptures = data.map(verse => ({
+          id: verse.id,
+          source_ref: `${verse.surahs.name_ar} - الآية ${verse.ayah_number}`,
+          text_ar: verse.text_ar,
+          text_type: 'quran',
+          chapter_name: verse.surahs.name_ar,
+          verse_number: verse.ayah_number,
+          similarity: 0.8
+        }));
         console.log('Direct text search successful:', scriptures.length, 'results');
       } else {
         // If no direct match, try searching for individual meaningful words
@@ -153,15 +168,29 @@ serve(async (req) => {
         for (const word of queryWords.slice(0, 3)) {
           console.log('Searching for word:', word);
           const { data: wordData } = await supabase
-            .from('scripture')
-            .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+            .from('verses')
+            .select(`
+              id,
+              surah_id,
+              ayah_number,
+              text_ar,
+              surahs!inner(name_ar, name_en)
+            `)
             .filter('text_ar', 'ilike', `%${word}%`)
             .limit(2);
             
           if (wordData && wordData.length > 0) {
             console.log('Found results for word', word, ':', wordData.length);
             if (!scriptures) scriptures = [];
-            scriptures.push(...wordData.map(item => ({ ...item, similarity: 0.6 })));
+            scriptures.push(...wordData.map(verse => ({
+              id: verse.id,
+              source_ref: `${verse.surahs.name_ar} - الآية ${verse.ayah_number}`,
+              text_ar: verse.text_ar,
+              text_type: 'quran',
+              chapter_name: verse.surahs.name_ar,
+              verse_number: verse.ayah_number,
+              similarity: 0.6
+            })));
           }
         }
         
@@ -174,16 +203,30 @@ serve(async (req) => {
           console.log('Word search completed:', scriptures.length, 'unique results');
         } else {
           console.log('No word matches found, trying fallback...');
-          // Last resort fallback
+          // Last resort fallback - get Al-Fatihah
           const { data: fallbackData } = await supabase
-            .from('scripture')
-            .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
-            .filter('text_ar', 'ilike', '%الله%')
+            .from('verses')
+            .select(`
+              id,
+              surah_id,
+              ayah_number,
+              text_ar,
+              surahs!inner(name_ar, name_en)
+            `)
+            .eq('surah_id', 1)
             .limit(3);
             
           if (fallbackData && fallbackData.length > 0) {
             console.log('Fallback search successful:', fallbackData.length);
-            scriptures = fallbackData.map(item => ({ ...item, similarity: 0.5 }));
+            scriptures = fallbackData.map(verse => ({
+              id: verse.id,
+              source_ref: `${verse.surahs.name_ar} - الآية ${verse.ayah_number}`,
+              text_ar: verse.text_ar,
+              text_type: 'quran',
+              chapter_name: verse.surahs.name_ar,
+              verse_number: verse.ayah_number,
+              similarity: 0.5
+            }));
           }
         }
       }
