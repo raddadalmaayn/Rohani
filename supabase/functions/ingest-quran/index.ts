@@ -1,166 +1,70 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.201.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.5";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const cors = {
+  "Access-Control-Allow-Origin":  "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
 interface QuranData {
-  sura: number;
-  aya: number;
-  text: string;
+  sura: number;           // = surah_id
+  aya:  number;           // = ayah_number
+  text: string;           // = text_ar
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS")
+    return new Response(null, { headers: cors });
 
   try {
-    console.log('Starting Quran data ingestion...');
-    
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false } }
+    );
 
-    // Complete Quran data - Tanzil Uthmani text
-    const quranData: QuranData[] = [
-      // Al-Fatihah (complete)
-      { sura: 1, aya: 1, text: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ" },
-      { sura: 1, aya: 2, text: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ" },
-      { sura: 1, aya: 3, text: "الرَّحْمَٰنِ الرَّحِيمِ" },
-      { sura: 1, aya: 4, text: "مَالِكِ يَوْمِ الدِّينِ" },
-      { sura: 1, aya: 5, text: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ" },
-      { sura: 1, aya: 6, text: "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ" },
-      { sura: 1, aya: 7, text: "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ" },
+    /* 1. تحميل بيانات القرآن (أمثلة قصيرة هنا) */
+    const quranData: QuranData[] = [ /* … */ ];
 
-      // Al-Baqarah (complete - first 50 verses)
-      { sura: 2, aya: 1, text: "الم" },
-      { sura: 2, aya: 2, text: "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ فِيهِ هُدًى لِّلْمُتَّقِينَ" },
-      { sura: 2, aya: 3, text: "الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ" },
-      { sura: 2, aya: 4, text: "وَالَّذِينَ يُؤْمِنُونَ بِمَا أُنزِلَ إِلَيْكَ وَمَا أُنزِلَ مِن قَبْلِكَ وَبِالْآخِرَةِ هُمْ يُوقِنُونَ" },
-      { sura: 2, aya: 5, text: "أُولَٰئِكَ عَلَىٰ هُدًى مِّن رَّبِّهِمْ وَأُولَٰئِكَ هُمُ الْمُفْلِحُونَ" },
-      { sura: 2, aya: 6, text: "إِنَّ الَّذِينَ كَفَرُوا سَوَاءٌ عَلَيْهِمْ أَأَنذَرْتَهُمْ أَمْ لَمْ تُنذِرْهُمْ لَا يُؤْمِنُونَ" },
-      { sura: 2, aya: 7, text: "خَتَمَ اللَّهُ عَلَىٰ قُلُوبِهِمْ وَعَلَىٰ سَمْعِهِمْ وَعَلَىٰ أَبْصَارِهِمْ غِشَاوَةٌ وَلَهُمْ عَذَابٌ عَظِيمٌ" },
-      { sura: 2, aya: 8, text: "وَمِنَ النَّاسِ مَن يَقُولُ آمَنَّا بِاللَّهِ وَبِالْيَوْمِ الْآخِرِ وَمَا هُم بِمُؤْمِنِينَ" },
-      { sura: 2, aya: 9, text: "يُخَادِعُونَ اللَّهَ وَالَّذِينَ آمَنُوا وَمَا يَخْدَعُونَ إِلَّا أَنفُسَهُمْ وَمَا يَشْعُرُونَ" },
-      { sura: 2, aya: 10, text: "فِي قُلُوبِهِم مَّرَضٌ فَزَادَهُمُ اللَّهُ مَرَضًا وَلَهُمْ عَذَابٌ أَلِيمٌ بِمَا كَانُوا يَكْذِبُونَ" },
-      { sura: 2, aya: 11, text: "وَإِذَا قِيلَ لَهُمْ لَا تُفْسِدُوا فِي الْأَرْضِ قَالُوا إِنَّمَا نَحْنُ مُصْلِحُونَ" },
-      { sura: 2, aya: 12, text: "أَلَا إِنَّهُمْ هُمُ الْمُفْسِدُونَ وَلَٰكِن لَّا يَشْعُرُونَ" },
-      { sura: 2, aya: 13, text: "وَإِذَا قِيلَ لَهُمْ آمِنُوا كَمَا آمَنَ النَّاسُ قَالُوا أَنُؤْمِنُ كَمَا آمَنَ السُّفَهَاءُ أَلَا إِنَّهُمْ هُمُ السُّفَهَاءُ وَلَٰكِن لَّا يَعْلَمُونَ" },
-      { sura: 2, aya: 14, text: "وَإِذَا لَقُوا الَّذِينَ آمَنُوا قَالُوا آمَنَّا وَإِذَا خَلَوْا إِلَىٰ شَيَاطِينِهِمْ قَالُوا إِنَّا مَعَكُمْ إِنَّمَا نَحْنُ مُسْتَهْزِئُونَ" },
-      { sura: 2, aya: 15, text: "اللَّهُ يَسْتَهْزِئُ بِهِمْ وَيَمُدُّهُمْ فِي طُغْيَانِهِمْ يَعْمَهُونَ" },
-      { sura: 2, aya: 16, text: "أُولَٰئِكَ الَّذِينَ اشْتَرَوُا الضَّلَالَةَ بِالْهُدَىٰ فَمَا رَبِحَت تِّجَارَتُهُمْ وَمَا كَانُوا مُهْتَدِينَ" },
-      { sura: 2, aya: 17, text: "مَثَلُهُمْ كَمَثَلِ الَّذِي اسْتَوْقَدَ نَارًا فَلَمَّا أَضَاءَتْ مَا حَوْلَهُ ذَهَبَ اللَّهُ بِنُورِهِمْ وَتَرَكَهُمْ فِي ظُلُمَاتٍ لَّا يُبْصِرُونَ" },
-      { sura: 2, aya: 18, text: "صُمٌّ بُكْمٌ عُمْيٌ فَهُمْ لَا يَرْجِعُونَ" },
-      { sura: 2, aya: 19, text: "أَوْ كَصَيِّبٍ مِّنَ السَّمَاءِ فِيهِ ظُلُمَاتٌ وَرَعْدٌ وَبَرْقٌ يَجْعَلُونَ أَصَابِعَهُمْ فِي آذَانِهِم مِّنَ الصَّوَاعِقِ حَذَرَ الْمَوْتِ وَاللَّهُ مُحِيطٌ بِالْكَافِرِينَ" },
-      { sura: 2, aya: 20, text: "يَكَادُ الْبَرْقُ يَخْطَفُ أَبْصَارَهُمْ كُلَّمَا أَضَاءَ لَهُم مَّشَوْا فِيهِ وَإِذَا أَظْلَمَ عَلَيْهِمْ قَامُوا وَلَوْ شَاءَ اللَّهُ لَذَهَبَ بِسَمْعِهِمْ وَأَبْصَارِهِمْ إِنَّ اللَّهَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ" },
-      { sura: 2, aya: 21, text: "يَا أَيُّهَا النَّاسُ اعْبُدُوا رَبَّكُمُ الَّذِي خَلَقَكُمْ وَالَّذِينَ مِن قَبْلِكُمْ لَعَلَّكُمْ تَتَّقُونَ" },
-      { sura: 2, aya: 22, text: "الَّذِي جَعَلَ لَكُمُ الْأَرْضَ فِرَاشًا وَالسَّمَاءَ بِنَاءً وَأَنزَلَ مِنَ السَّمَاءِ مَاءً فَأَخْرَجَ بِهِ مِنَ الثَّمَرَاتِ رِزْقًا لَّكُمْ فَلَا تَجْعَلُوا لِلَّهِ أَندَادًا وَأَنتُمْ تَعْلَمُونَ" },
-      { sura: 2, aya: 23, text: "وَإِن كُنتُمْ فِي رَيْبٍ مِّمَّا نَزَّلْنَا عَلَىٰ عَبْدِنَا فَأْتُوا بِسُورَةٍ مِّن مِّثْلِهِ وَادْعُوا شُهَدَاءَكُم مِّن دُونِ اللَّهِ إِن كُنتُمْ صَادِقِينَ" },
-      { sura: 2, aya: 24, text: "فَإِن لَّمْ تَفْعَلُوا وَلَن تَفْعَلُوا فَاتَّقُوا النَّارَ الَّتِي وَقُودُهَا النَّاسُ وَالْحِجَارَةُ أُعِدَّتْ لِلْكَافِرِينَ" },
-      { sura: 2, aya: 25, text: "وَبَشِّرِ الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ أَنَّ لَهُمْ جَنَّاتٍ تَجْرِي مِن تَحْتِهَا الْأَنْهَارُ كُلَّمَا رُزِقُوا مِنْهَا مِن ثَمَرَةٍ رِّزْقًا قَالُوا هَٰذَا الَّذِي رُزِقْنَا مِن قَبْلُ وَأُتُوا بِهِ مُتَشَابِهًا وَلَهُمْ فِيهَا أَزْوَاجٌ مُّطَهَّرَةٌ وَهُمْ فِيهَا خَالِدُونَ" },
-      { sura: 2, aya: 26, text: "إِنَّ اللَّهَ لَا يَسْتَحْيِي أَن يَضْرِبَ مَثَلًا مَّا بَعُوضَةً فَمَا فَوْقَهَا فَأَمَّا الَّذِينَ آمَنُوا فَيَعْلَمُونَ أَنَّهُ الْحَقُّ مِن رَّبِّهِمْ وَأَمَّا الَّذِينَ كَفَرُوا فَيَقُولُونَ مَاذَا أَرَادَ اللَّهُ بِهَٰذَا مَثَلًا يُضِلُّ بِهِ كَثِيرًا وَيَهْدِي بِهِ كَثِيرًا وَمَا يُضِلُّ بِهِ إِلَّا الْفَاسِقِينَ" },
-      { sura: 2, aya: 27, text: "الَّذِينَ يَنقُضُونَ عَهْدَ اللَّهِ مِن بَعْدِ مِيثَاقِهِ وَيَقْطَعُونَ مَا أَمَرَ اللَّهُ بِهِ أَن يُوصَلَ وَيُفْسِدُونَ فِي الْأَرْضِ أُولَٰئِكَ هُمُ الْخَاسِرُونَ" },
-      { sura: 2, aya: 28, text: "كَيْفَ تَكْفُرُونَ بِاللَّهِ وَكُنتُمْ أَمْوَاتًا فَأَحْيَاكُمْ ثُمَّ يُمِيتُكُمْ ثُمَّ يُحْيِيكُمْ ثُمَّ إِلَيْهِ تُرْجَعُونَ" },
-      { sura: 2, aya: 29, text: "هُوَ الَّذِي خَلَقَ لَكُم مَّا فِي الْأَرْضِ جَمِيعًا ثُمَّ اسْتَوَىٰ إِلَى السَّمَاءِ فَسَوَّاهُنَّ سَبْعَ سَمَاوَاتٍ وَهُوَ بِكُلِّ شَيْءٍ عَلِيمٌ" },
-      { sura: 2, aya: 30, text: "وَإِذْ قَالَ رَبُّكَ لِلْمَلَائِكَةِ إِنِّي جَاعِلٌ فِي الْأَرْضِ خَلِيفَةً قَالُوا أَتَجْعَلُ فِيهَا مَن يُفْسِدُ فِيهَا وَيَسْفِكُ الدِّمَاءَ وَنَحْنُ نُسَبِّحُ بِحَمْدِكَ وَنُقَدِّسُ لَكَ قَالَ إِنِّي أَعْلَمُ مَا لَا تَعْلَمُونَ" },
+    /* 2. تفريغ الجدول بأمان */
+    await supabase.rpc("truncate_table", { table_name: "verses" }); // أنشِئ هذه الدالة مرة واحدة في SQL
+    // بديل سريع:
+    // await supabase.from("verses").delete().neq("id", 0);
 
-      // Al-Ikhlas (complete)
-      { sura: 112, aya: 1, text: "قُلْ هُوَ اللَّهُ أَحَدٌ" },
-      { sura: 112, aya: 2, text: "اللَّهُ الصَّمَدُ" },
-      { sura: 112, aya: 3, text: "لَمْ يَلِدْ وَلَمْ يُولَدْ" },
-      { sura: 112, aya: 4, text: "وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ" },
+    /* 3. إدراج دفعات */
+    const BATCH = 100;
+    let total = 0;
 
-      // Al-Falaq (complete)
-      { sura: 113, aya: 1, text: "قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ" },
-      { sura: 113, aya: 2, text: "مِن شَرِّ مَا خَلَقَ" },
-      { sura: 113, aya: 3, text: "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ" },
-      { sura: 113, aya: 4, text: "وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ" },
-      { sura: 113, aya: 5, text: "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ" },
-
-      // An-Nas (complete)
-      { sura: 114, aya: 1, text: "قُلْ أَعُوذُ بِرَبِّ النَّاسِ" },
-      { sura: 114, aya: 2, text: "مَلِكِ النَّاسِ" },
-      { sura: 114, aya: 3, text: "إِلَٰهِ النَّاسِ" },
-      { sura: 114, aya: 4, text: "مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ" },
-      { sura: 114, aya: 5, text: "الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ" },
-      { sura: 114, aya: 6, text: "مِنَ الْجِنَّةِ وَالنَّاسِ" },
-
-      // Saba (verse from the image)
-      { sura: 34, aya: 1, text: "الْحَمْدُ لِلَّهِ الَّذِي لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ وَلَهُ الْحَمْدُ فِي الْآخِرَةِ وَهُوَ الْحَكِيمُ الْخَبِيرُ" },
-      { sura: 34, aya: 2, text: "يَعْلَمُ مَا يَلِجُ فِي الْأَرْضِ وَمَا يَخْرُجُ مِنْهَا وَمَا يَنزِلُ مِنَ السَّمَاءِ وَمَا يَعْرُجُ فِيهَا وَهُوَ الرَّحِيمُ الْغَفُورُ" },
-      { sura: 34, aya: 3, text: "وَقَالَ الَّذِينَ كَفَرُوا لَا تَأْتِينَا السَّاعَةُ قُلْ بَلَىٰ وَرَبِّي لَتَأْتِيَنَّكُمْ عَالِمِ الْغَيْبِ لَا يَعْزُبُ عَنْهُ مِثْقَالُ ذَرَّةٍ فِي السَّمَاوَاتِ وَلَا فِي الْأَرْضِ وَلَا أَصْغَرُ مِن ذَٰلِكَ وَلَا أَكْبَرُ إِلَّا فِي كِتَابٍ مُّبِينٍ" },
-      { sura: 34, aya: 4, text: "لِّيَجْزِيَ الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ أُولَٰئِكَ لَهُم مَّغْفِرَةٌ وَرِزْقٌ كَرِيمٌ" },
-      { sura: 34, aya: 5, text: "وَالَّذِينَ سَعَوْا فِي آيَاتِنَا مُعَاجِزِينَ أُولَٰئِكَ لَهُمْ عَذَابٌ مِّن رِّجْزٍ أَلِيمٌ" },
-      { sura: 34, aya: 6, text: "وَيَرَى الَّذِينَ أُوتُوا الْعِلْمَ الَّذِي أُنزِلَ إِلَيْكَ مِن رَّبِّكَ هُوَ الْحَقَّ وَيَهْدِي إِلَىٰ صِرَاطِ الْعَزِيزِ الْحَمِيدِ" },
-      { sura: 34, aya: 7, text: "وَقَالَ الَّذِينَ كَفَرُوا هَلْ نَدُلُّكُمْ عَلَىٰ رَجُلٍ يُنَبِّئُكُمْ إِذَا مُزِّقْتُمْ كُلَّ مُمَزَّقٍ إِنَّكُمْ لَفِي خَلْقٍ جَدِيدٍ" },
-    ];
-
-    console.log(`Processing ${quranData.length} verses...`);
-
-    // Delete existing verses to avoid duplicates
-    const { error: deleteError } = await supabase
-      .from('verses')
-      .delete()
-      .neq('id', 0); // Delete all
-
-    if (deleteError) {
-      console.error('Error deleting existing verses:', deleteError);
-    }
-
-    // Insert verses in batches
-    const batchSize = 100;
-    let insertedCount = 0;
-
-    for (let i = 0; i < quranData.length; i += batchSize) {
-      const batch = quranData.slice(i, i + batchSize);
-      const versesToInsert = batch.map(verse => ({
-        surah_id: verse.sura,
-        ayah_number: verse.aya,
-        text_ar: verse.text,
-        text_en: null // We'll add English translation later if needed
+    for (let i = 0; i < quranData.length; i += BATCH) {
+      const batch = quranData.slice(i, i + BATCH).map(v => ({
+        surah_id:    v.sura,
+        ayah_number: v.aya,
+        text_ar:     v.text,
+        text_en:     null,     // حقل الترجمة إن وجد
+        juz:         null,
+        hizb:        null,
+        page:        null
       }));
 
-      const { data, error } = await supabase
-        .from('verses')
-        .insert(versesToInsert)
-        .select();
-
-      if (error) {
-        console.error('Error inserting batch:', error);
-        throw error;
-      }
-
-      insertedCount += data?.length || 0;
-      console.log(`Inserted batch ${Math.floor(i/batchSize) + 1}, total: ${insertedCount}`);
+      const { data, error } = await supabase.from("verses").insert(batch).select("id");
+      if (error) throw error;
+      total += data!.length;
+      console.log(`✓ batch ${Math.floor(i / BATCH) + 1} inserted, total = ${total}`);
     }
 
-    console.log(`Successfully ingested ${insertedCount} verses`);
+    return json({ success: true, inserted: total });
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `Successfully ingested ${insertedCount} verses`,
-        inserted_count: insertedCount
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
-
-  } catch (error) {
-    console.error('Error in ingest-quran function:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        success: false 
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+  } catch (e) {
+    console.error(e);
+    return json({ success: false, error: e.message }, 500);
   }
 });
+
+/* ---------- helpers ---------- */
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" }
+  });
+}
