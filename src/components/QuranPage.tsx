@@ -176,8 +176,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
           </div>
         </div>
 
-        {/* Quran Reader */}
-        <div className="flex-1 overflow-auto bg-gradient-to-b from-background to-muted/20" style={{ height: 'calc(100vh - 8rem)' }}>
+        {/* Quran Reader - Traditional Layout */}
+        <div className="flex-1 overflow-auto bg-gradient-to-b from-amber-50 to-amber-100/50 dark:from-background dark:to-muted/20" style={{ height: 'calc(100vh - 8rem)' }}>
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -186,38 +186,56 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
               </div>
             </div>
           ) : currentVerses.length > 0 ? (
-            <div className="max-w-4xl mx-auto p-8">
-              <Card className="shadow-spiritual border-0 bg-white/95 backdrop-blur">
-                <CardContent className="p-12">
-                  {/* Bismillah for non-Tawbah surahs */}
-                  {selectedSurah.id !== 9 && currentPage === 1 && (
-                    <div className="text-center mb-12">
-                      <p className="text-3xl font-arabic leading-relaxed text-primary" dir="rtl">
+            <div className="max-w-3xl mx-auto p-6">
+              {/* Traditional Quran Page Layout */}
+              <div className="bg-white dark:bg-background border-2 border-amber-200 dark:border-border rounded-lg shadow-2xl min-h-[800px] p-8" style={{ aspectRatio: '1/1.4' }}>
+                
+                {/* Decorative Header */}
+                <div className="text-center mb-8">
+                  <div className="border-2 border-amber-400 dark:border-primary rounded-lg p-4 bg-gradient-to-r from-amber-100 to-amber-50 dark:from-primary/10 dark:to-primary/5">
+                    <h2 className="text-xl font-arabic font-bold text-amber-800 dark:text-primary" dir="rtl">
+                      سُورَةُ {selectedSurah.name_ar}
+                    </h2>
+                  </div>
+                </div>
+
+                {/* Bismillah for non-Tawbah surahs */}
+                {selectedSurah.id !== 9 && currentPage === 1 && (
+                  <div className="text-center mb-8">
+                    <div className="inline-block border border-amber-300 dark:border-primary/30 rounded-full px-6 py-2 bg-amber-50/50 dark:bg-primary/5">
+                      <p className="text-2xl font-arabic leading-relaxed text-amber-900 dark:text-primary" dir="rtl">
                         بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                       </p>
-                      <Separator className="my-8 bg-primary/20" />
                     </div>
-                  )}
-
-                  {/* Verses */}
-                  <div className="space-y-8">
-                    {currentVerses.map((verse, index) => (
-                      <div key={verse.id} className="text-right" dir="rtl">
-                        <p className="text-2xl font-arabic leading-loose text-foreground mb-4">
-                          {verse.text_ar}
-                          <span className="inline-block mr-3 text-lg bg-primary text-primary-foreground rounded-full w-8 h-8 text-center leading-8 font-medium">
-                            {verse.ayah_number}
-                          </span>
-                        </p>
-                        
-                        {index < currentVerses.length - 1 && (
-                          <Separator className="my-6 bg-border/30" />
-                        )}
-                      </div>
-                    ))}
                   </div>
-                </CardContent>
-              </Card>
+                )}
+
+                {/* Verses in Traditional Layout */}
+                <div className="space-y-4 text-right" dir="rtl">
+                  {currentVerses.map((verse, index) => (
+                    <div key={verse.id} className="leading-loose">
+                      <span className="text-2xl font-arabic text-gray-800 dark:text-foreground inline">
+                        {verse.text_ar}
+                      </span>
+                      {/* Circular verse number - traditional style */}
+                      <span className="inline-block mx-2 align-middle">
+                        <span className="inline-flex items-center justify-center w-7 h-7 bg-amber-200 dark:bg-primary/20 border border-amber-400 dark:border-primary rounded-full text-sm font-bold text-amber-800 dark:text-primary">
+                          {verse.ayah_number}
+                        </span>
+                      </span>
+                      {/* Add space after each verse for better readability */}
+                      {index < currentVerses.length - 1 && <span className="inline-block w-4"></span>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Page number at bottom */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-amber-100 dark:bg-primary/10 border border-amber-300 dark:border-primary/30 rounded-full px-4 py-1">
+                    <span className="text-sm font-arabic text-amber-800 dark:text-primary">٤٢٨</span>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">

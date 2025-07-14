@@ -10,7 +10,7 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
   const navItems = [
     { id: 'scripture', label: 'اسأل القرآن', icon: Search },
     { id: 'quran', label: 'المصحف', icon: BookOpen },
-    { id: 'bookmarks', label: 'المفضلة', icon: Heart },
+    { id: 'calendar', label: 'التقويم', icon: Calendar },
     { id: 'dashboard', label: 'إحصائيات', icon: TrendingUp },
     { id: 'profile', label: 'الملف', icon: User }
   ];
