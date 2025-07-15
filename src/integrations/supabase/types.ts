@@ -369,44 +369,69 @@ export type Database = {
       }
       verses: {
         Row: {
-          ayah_number: number
-          created_at: string
-          embedding: string | null
-          id: number
-          surah_id: number
-          text_ar: string
-          text_en: string | null
-          updated_at: string
+          ayah_ar: string | null
+          ayah_en: string | null
+          ayah_no_quran: number | null
+          ayah_no_surah: number | null
+          hizb_quarter: number | null
+          juz_no: number | null
+          list_of_words: string | null
+          manzil_no: number | null
+          no_of_word_ayah: number | null
+          place_of_revelation: string | null
+          ruko_no: number | null
+          sajah_ayah: boolean | null
+          sajdah_no: string | null
+          surah_name_ar: string | null
+          surah_name_en: string | null
+          surah_name_roman: string | null
+          surah_no: number | null
+          total_ayah_quran: number | null
+          total_ayah_surah: number | null
         }
         Insert: {
-          ayah_number: number
-          created_at?: string
-          embedding?: string | null
-          id?: number
-          surah_id: number
-          text_ar: string
-          text_en?: string | null
-          updated_at?: string
+          ayah_ar?: string | null
+          ayah_en?: string | null
+          ayah_no_quran?: number | null
+          ayah_no_surah?: number | null
+          hizb_quarter?: number | null
+          juz_no?: number | null
+          list_of_words?: string | null
+          manzil_no?: number | null
+          no_of_word_ayah?: number | null
+          place_of_revelation?: string | null
+          ruko_no?: number | null
+          sajah_ayah?: boolean | null
+          sajdah_no?: string | null
+          surah_name_ar?: string | null
+          surah_name_en?: string | null
+          surah_name_roman?: string | null
+          surah_no?: number | null
+          total_ayah_quran?: number | null
+          total_ayah_surah?: number | null
         }
         Update: {
-          ayah_number?: number
-          created_at?: string
-          embedding?: string | null
-          id?: number
-          surah_id?: number
-          text_ar?: string
-          text_en?: string | null
-          updated_at?: string
+          ayah_ar?: string | null
+          ayah_en?: string | null
+          ayah_no_quran?: number | null
+          ayah_no_surah?: number | null
+          hizb_quarter?: number | null
+          juz_no?: number | null
+          list_of_words?: string | null
+          manzil_no?: number | null
+          no_of_word_ayah?: number | null
+          place_of_revelation?: string | null
+          ruko_no?: number | null
+          sajah_ayah?: boolean | null
+          sajdah_no?: string | null
+          surah_name_ar?: string | null
+          surah_name_en?: string | null
+          surah_name_roman?: string | null
+          surah_no?: number | null
+          total_ayah_quran?: number | null
+          total_ayah_surah?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "verses_surah_id_fkey"
-            columns: ["surah_id"]
-            isOneToOne: false
-            referencedRelation: "surahs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

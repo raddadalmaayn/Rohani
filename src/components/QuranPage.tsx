@@ -17,11 +17,10 @@ interface Surah {
 }
 
 interface Verse {
-  id: number;
-  surah_id: number;
-  ayah_number: number;
-  text_ar: string;
-  text_en: string | null;
+  surah_no: number;
+  ayah_no_surah: number;
+  ayah_ar: string;
+  ayah_en: string | null;
 }
 
 interface QuranPageProps {
@@ -49,7 +48,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
       // Check if we have verse data
       const { data: verseCheck } = await supabase
         .from('verses')
-        .select('id')
+        .select('surah_no')
         .limit(1);
 
       if (!verseCheck || verseCheck.length === 0) {
@@ -106,8 +105,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
       const { data, error } = await supabase
         .from('verses')
         .select('*')
-        .eq('surah_id', surahId)
-        .order('ayah_number');
+        .eq('surah_no', surahId)
+        .order('ayah_no_surah');
 
       if (error) throw error;
       setVerses(data || []);
@@ -210,17 +209,17 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                   </div>
                 )}
 
-                {/* Verses in Traditional Layout */}
+                 {/* Verses in Traditional Layout */}
                 <div className="space-y-4 text-right" dir="rtl">
                   {currentVerses.map((verse, index) => (
-                    <div key={verse.id} className="leading-loose">
+                    <div key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="leading-loose">
                       <span className="text-2xl font-arabic text-gray-800 dark:text-foreground inline">
-                        {verse.text_ar}
+                        {verse.ayah_ar}
                       </span>
                       {/* Circular verse number - traditional style */}
                       <span className="inline-block mx-2 align-middle">
                         <span className="inline-flex items-center justify-center w-7 h-7 bg-amber-200 dark:bg-primary/20 border border-amber-400 dark:border-primary rounded-full text-sm font-bold text-amber-800 dark:text-primary">
-                          {verse.ayah_number}
+                          {verse.ayah_no_surah}
                         </span>
                       </span>
                       {/* Add space after each verse for better readability */}
