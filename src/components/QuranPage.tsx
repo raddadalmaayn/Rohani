@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Navigation } from '@/components/Navigation';
-import { ChevronLeft, ChevronRight, Book, BookOpen, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, BookOpen, Home } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { initializeQuran } from '@/utils/initializeQuran';
 
 interface Surah {
   id: number;
@@ -34,51 +34,15 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSurahPicker, setShowSurahPicker] = useState(false);
   const { toast } = useToast();
 
-  const versesPerPage = 10; // Standard Quran page layout
+  const versesPerPage = 15; // Traditional Quran page layout
 
   useEffect(() => {
     loadSurahs();
-    initializeQuranData();
   }, []);
-
-  const initializeQuranData = async () => {
-    try {
-      // Check if we have verse data
-      const { data: verseCheck } = await supabase
-        .from('verses')
-        .select('surah_no')
-        .limit(1);
-
-      if (!verseCheck || verseCheck.length === 0) {
-        console.log('No verses found, ingesting Quran data...');
-        toast({
-          title: 'إعداد المصحف',
-          description: 'جاري تحميل آيات القرآن الكريم للمرة الأولى...',
-        });
-
-        const { data, error } = await supabase.functions.invoke('ingest-quran');
-        
-        if (error) {
-          console.error('Error ingesting Quran:', error);
-          toast({
-            title: 'خطأ في التحميل',
-            description: 'حدث خطأ أثناء تحميل القرآن الكريم',
-            variant: 'destructive',
-          });
-        } else {
-          console.log('Quran ingestion result:', data);
-          toast({
-            title: 'تم التحميل بنجاح',
-            description: 'تم تحميل آيات القرآن الكريم بنجاح',
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error initializing Quran data:', error);
-    }
-  };
 
   const loadSurahs = async () => {
     try {
@@ -102,13 +66,19 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
   const loadVerses = async (surahId: number) => {
     setIsLoading(true);
     try {
+      console.log('Loading verses for surah:', surahId);
       const { data, error } = await supabase
         .from('verses')
         .select('*')
         .eq('surah_no', surahId)
         .order('ayah_no_surah');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Verses loaded:', data?.length);
       setVerses(data || []);
       setCurrentPage(1);
     } catch (error) {
@@ -127,6 +97,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
     setSelectedSurah(surah);
     await loadVerses(surah.id);
     setCurrentView('reader');
+    setShowSurahPicker(false);
   };
 
   const goToNextSurah = () => {
@@ -147,91 +118,121 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
     }
   };
 
+  const filteredSurahs = surahs.filter(surah => 
+    surah.name_ar.includes(searchTerm) || 
+    surah.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    surah.id.toString().includes(searchTerm)
+  );
+
   const totalPages = Math.ceil(verses.length / versesPerPage);
   const currentVerses = verses.slice((currentPage - 1) * versesPerPage, currentPage * versesPerPage);
 
   if (currentView === 'reader' && selectedSurah) {
     return (
-      <div className="fixed inset-0 bg-background z-50 overflow-hidden">
-        {/* Header */}
-        <div className="h-16 bg-primary text-primary-foreground flex items-center justify-between px-4 border-b">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCurrentView('index')}
-            className="text-primary-foreground hover:bg-primary-foreground/20"
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            فهرس السور
-          </Button>
+      <div className="fixed inset-0 bg-[#faf9f6] dark:bg-[#0d0d0d] z-50 overflow-hidden">
+        {/* Ornamental Surah Header */}
+        <Dialog open={showSurahPicker} onOpenChange={setShowSurahPicker}>
+          <DialogTrigger asChild>
+            <div className="h-14 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-b-2 border-amber-200 dark:border-amber-700 flex items-center justify-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
+              <div className="text-center">
+                <h1 className="text-xl font-bold text-[#3c2f1b] dark:text-amber-200" style={{ fontFamily: 'Amiri, serif' }}>
+                  سُورَةُ {selectedSurah.name_ar}
+                </h1>
+                <p className="text-xs text-amber-700 dark:text-amber-300">{selectedSurah.name_en}</p>
+              </div>
+            </div>
+          </DialogTrigger>
           
-          <div className="text-center">
-            <h1 className="text-lg font-bold font-arabic">سورة {selectedSurah.name_ar}</h1>
-            <p className="text-sm opacity-90">{selectedSurah.name_en}</p>
-          </div>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle className="text-center font-arabic">فهرس السور</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input
+                placeholder="ابحث بالاسم أو الرقم"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="text-right"
+                dir="rtl"
+              />
+              <div className="max-h-[400px] overflow-y-auto space-y-2">
+                {filteredSurahs.map((surah) => (
+                  <Card 
+                    key={surah.id} 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => openSurah(surah)}
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+                          {surah.id}
+                        </div>
+                        <div className="flex-1 text-right mr-3" dir="rtl">
+                          <h3 className="font-bold font-arabic">{surah.name_ar}</h3>
+                          <p className="text-xs text-muted-foreground">{surah.name_en}</p>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {surah.ayah_count} آية
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
-          <div className="text-sm">
-            صفحة {currentPage} من {totalPages}
-          </div>
-        </div>
-
-        {/* Quran Reader - Traditional Layout */}
-        <div className="flex-1 overflow-auto bg-gradient-to-b from-amber-50 to-amber-100/50 dark:from-background dark:to-muted/20" style={{ height: 'calc(100vh - 8rem)' }}>
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-auto" style={{ height: 'calc(100vh - 10rem)' }}>
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-4 text-muted-foreground">جاري تحميل الآيات...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto"></div>
+                <p className="mt-4 text-amber-700 dark:text-amber-300">جاري تحميل الآيات...</p>
               </div>
             </div>
           ) : currentVerses.length > 0 ? (
-            <div className="max-w-3xl mx-auto p-6">
-              {/* Traditional Quran Page Layout */}
-              <div className="bg-white dark:bg-background border-2 border-amber-200 dark:border-border rounded-lg shadow-2xl min-h-[800px] p-8" style={{ aspectRatio: '1/1.4' }}>
+            <div className="max-w-4xl mx-auto p-6">
+              {/* Traditional Mushaf Page */}
+              <div className="bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-700 rounded-lg shadow-xl min-h-[700px] p-8 relative">
                 
-                {/* Decorative Header */}
-                <div className="text-center mb-8">
-                  <div className="border-2 border-amber-400 dark:border-primary rounded-lg p-4 bg-gradient-to-r from-amber-100 to-amber-50 dark:from-primary/10 dark:to-primary/5">
-                    <h2 className="text-xl font-arabic font-bold text-amber-800 dark:text-primary" dir="rtl">
-                      سُورَةُ {selectedSurah.name_ar}
-                    </h2>
-                  </div>
-                </div>
-
-                {/* Bismillah for non-Tawbah surahs */}
+                {/* Basmala - only for non-Tawbah surahs and first page */}
                 {selectedSurah.id !== 9 && currentPage === 1 && (
                   <div className="text-center mb-8">
-                    <div className="inline-block border border-amber-300 dark:border-primary/30 rounded-full px-6 py-2 bg-amber-50/50 dark:bg-primary/5">
-                      <p className="text-2xl font-arabic leading-relaxed text-amber-900 dark:text-primary" dir="rtl">
+                    <div className="inline-block border border-amber-300 dark:border-amber-600 rounded-full px-8 py-3 bg-amber-50/50 dark:bg-amber-900/20">
+                      <p className="text-2xl leading-relaxed text-[#3c2f1b] dark:text-amber-200" style={{ fontFamily: 'Amiri, serif' }} dir="rtl">
                         بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                       </p>
                     </div>
                   </div>
                 )}
 
-                 {/* Verses in Traditional Layout */}
-                <div className="space-y-4 text-right" dir="rtl">
+                {/* Verses with Traditional Layout */}
+                <div className="space-y-1 text-right leading-loose" dir="rtl" style={{ fontSize: '24px', lineHeight: '2.2', fontFamily: 'Amiri, serif' }}>
                   {currentVerses.map((verse, index) => (
-                    <div key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="leading-loose">
-                      <span className="text-2xl font-arabic text-gray-800 dark:text-foreground inline">
+                    <span key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
+                      <span className="text-black dark:text-gray-100 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 px-1 rounded transition-colors">
                         {verse.ayah_ar}
                       </span>
-                      {/* Circular verse number - traditional style */}
-                      <span className="inline-block mx-2 align-middle">
-                        <span className="inline-flex items-center justify-center w-7 h-7 bg-amber-200 dark:bg-primary/20 border border-amber-400 dark:border-primary rounded-full text-sm font-bold text-amber-800 dark:text-primary">
+                      {/* Ayah Circle Marker */}
+                      <span className="inline-block mx-1 align-middle">
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-amber-100 dark:bg-amber-800 border border-amber-400 dark:border-amber-600 rounded-full text-xs font-bold text-[#3c2f1b] dark:text-amber-200">
                           {verse.ayah_no_surah}
                         </span>
                       </span>
-                      {/* Add space after each verse for better readability */}
-                      {index < currentVerses.length - 1 && <span className="inline-block w-4"></span>}
-                    </div>
+                      {/* Add spacing between verses */}
+                      <span className="inline-block w-2"></span>
+                    </span>
                   ))}
                 </div>
 
-                {/* Page number at bottom */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-amber-100 dark:bg-primary/10 border border-amber-300 dark:border-primary/30 rounded-full px-4 py-1">
-                    <span className="text-sm font-arabic text-amber-800 dark:text-primary">٤٢٨</span>
+                {/* Page Number Pill */}
+                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full px-4 py-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-300" style={{ fontFamily: 'Inter, sans-serif' }}>
+                      {currentPage}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -239,36 +240,41 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg text-muted-foreground">لا توجد آيات متاحة لهذه السورة</p>
+                <BookOpen className="h-16 w-16 text-amber-600 mx-auto mb-4" />
+                <p className="text-lg text-amber-700 dark:text-amber-300">لا توجد آيات متاحة لهذه السورة</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  السورة: {selectedSurah.name_ar} - الآيات المطلوبة: {selectedSurah.ayah_count}
+                </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer Controls */}
-        <div className="h-16 bg-muted border-t flex items-center justify-between px-4">
+        {/* Navigation Controls */}
+        <div className="h-16 bg-white dark:bg-gray-900 border-t border-amber-200 dark:border-amber-700 flex items-center justify-between px-4">
           <Button
             variant="outline"
             onClick={goToPrevSurah}
             disabled={!selectedSurah || selectedSurah.id === 1}
+            className="text-amber-700 border-amber-300 hover:bg-amber-50"
           >
             <ChevronRight className="h-4 w-4 mr-2" />
             السورة السابقة
           </Button>
 
           {/* Page Navigation */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
+              className="text-amber-700 border-amber-300"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
             
-            <span className="text-sm px-3">
+            <span className="text-sm px-4 py-2 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-800 dark:text-amber-200">
               صفحة {currentPage} من {totalPages}
             </span>
             
@@ -277,6 +283,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
               size="sm"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
+              className="text-amber-700 border-amber-300"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -286,16 +293,44 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
             variant="outline"
             onClick={goToNextSurah}
             disabled={!selectedSurah || selectedSurah.id === 114}
+            className="text-amber-700 border-amber-300 hover:bg-amber-50"
           >
             السورة التالية
             <ChevronLeft className="h-4 w-4 ml-2" />
           </Button>
         </div>
 
-        {/* Floating Navigation - only show when onNavigate is provided */}
+        {/* Back to Index Button */}
+        <div className="absolute top-4 left-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentView('index')}
+            className="text-amber-700 hover:bg-amber-100"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            فهرس السور
+          </Button>
+        </div>
+
+        {/* Ask Quran Floating Button */}
+        {onNavigate && (
+          <div className="fixed bottom-20 right-6 z-50">
+            <Button
+              onClick={() => onNavigate('ask')}
+              className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg rounded-full p-4"
+              size="lg"
+            >
+              <Search className="h-5 w-5 mr-2" />
+              اسأل القرآن
+            </Button>
+          </div>
+        )}
+
+        {/* Floating Navigation */}
         {onNavigate && (
           <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-            <div className="bg-background/95 backdrop-blur-sm border rounded-full shadow-lg px-2 py-2">
+            <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-amber-200 dark:border-amber-700 rounded-full shadow-lg px-2 py-2">
               <Navigation 
                 currentView="quran" 
                 onViewChange={onNavigate}
@@ -309,40 +344,55 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
 
   // Surah Index View
   return (
-    <div className="min-h-screen bg-gradient-calm p-4">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white dark:from-gray-900 dark:to-gray-800 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2 font-arabic">المصحف الشريف</h1>
-          <p className="text-muted-foreground">فهرس سور القرآن الكريم</p>
+          <h1 className="text-4xl font-bold mb-2 text-amber-800 dark:text-amber-200" style={{ fontFamily: 'Amiri, serif' }}>
+            المصحف الشريف
+          </h1>
+          <p className="text-amber-600 dark:text-amber-300">فهرس سور القرآن الكريم</p>
+        </div>
+
+        {/* Search */}
+        <div className="mb-6">
+          <Input
+            placeholder="ابحث عن سورة..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="text-right border-amber-300 focus:border-amber-500"
+            dir="rtl"
+          />
         </div>
 
         {/* Surahs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {surahs.map((surah) => (
+          {filteredSurahs.map((surah) => (
             <Card 
               key={surah.id} 
-              className="shadow-gentle hover:shadow-spiritual transition-all duration-200 cursor-pointer group"
+              className="shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer group border-amber-200 hover:border-amber-400"
               onClick={() => openSurah(surah)}
             >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-full flex items-center justify-center font-bold">
                       {surah.id}
                     </div>
                     <div className="text-right" dir="rtl">
-                      <h3 className="text-xl font-bold font-arabic mb-1">{surah.name_ar}</h3>
-                      <p className="text-sm text-muted-foreground">{surah.name_en}</p>
+                      <h3 className="text-xl font-bold text-amber-800 dark:text-amber-200 mb-1" style={{ fontFamily: 'Amiri, serif' }}>
+                        {surah.name_ar}
+                      </h3>
+                      <p className="text-sm text-amber-600 dark:text-amber-400">{surah.name_en}</p>
                     </div>
                   </div>
                   
                   <div className="text-center">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                      <Book className="h-4 w-4" />
+                    <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300 mb-1">
+                      <BookOpen className="h-4 w-4" />
                       {surah.ayah_count} آية
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-amber-600 dark:text-amber-400">
                       {surah.revelation_place === 'mecca' ? 'مكية' : 'مدنية'}
                     </div>
                   </div>
