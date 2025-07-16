@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -38,7 +39,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
   const [showSurahPicker, setShowSurahPicker] = useState(false);
   const { toast } = useToast();
 
-  const versesPerPage = 15; // Traditional Quran page layout
+  const versesPerPage = 15;
 
   useEffect(() => {
     loadSurahs();
@@ -46,12 +47,18 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
 
   const loadSurahs = async () => {
     try {
+      console.log('Loading surahs...');
       const { data, error } = await supabase
         .from('surahs')
         .select('*')
         .order('id');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading surahs:', error);
+        throw error;
+      }
+      
+      console.log('Surahs loaded:', data?.length);
       setSurahs(data || []);
     } catch (error) {
       console.error('Error loading surahs:', error);
@@ -67,9 +74,21 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
     setIsLoading(true);
     try {
       console.log('Loading verses for surah:', surahId);
-      const { data, error } = await supabase
+      
+      // First, let's check what columns exist in the verses table
+      const { data: testData, error: testError } = await supabase
         .from('verses')
         .select('*')
+        .limit(1);
+      
+      if (testData && testData.length > 0) {
+        console.log('Sample verse data structure:', Object.keys(testData[0]));
+        console.log('Sample verse:', testData[0]);
+      }
+
+      const { data, error } = await supabase
+        .from('verses')
+        .select('surah_no, ayah_no_surah, ayah_ar, ayah_en')
         .eq('surah_no', surahId)
         .order('ayah_no_surah');
 
@@ -79,6 +98,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
       }
       
       console.log('Verses loaded:', data?.length);
+      console.log('First few verses:', data?.slice(0, 3));
+      
       setVerses(data || []);
       setCurrentPage(1);
     } catch (error) {
@@ -94,6 +115,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
   };
 
   const openSurah = async (surah: Surah) => {
+    console.log('Opening surah:', surah);
     setSelectedSurah(surah);
     await loadVerses(surah.id);
     setCurrentView('reader');
@@ -135,7 +157,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
           <DialogTrigger asChild>
             <div className="h-14 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-b-2 border-amber-200 dark:border-amber-700 flex items-center justify-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
               <div className="text-center">
-                <h1 className="text-xl font-bold text-[#3c2f1b] dark:text-amber-200" style={{ fontFamily: 'Amiri, serif' }}>
+                <h1 className="text-xl font-bold text-[#3c2f1b] dark:text-amber-200 font-amiri">
                   سُورَةُ {selectedSurah.name_ar}
                 </h1>
                 <p className="text-xs text-amber-700 dark:text-amber-300">{selectedSurah.name_en}</p>
@@ -145,7 +167,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
           
           <DialogContent className="max-w-md max-h-[80vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle className="text-center font-arabic">فهرس السور</DialogTitle>
+              <DialogTitle className="text-center font-amiri">فهرس السور</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <Input
@@ -168,7 +190,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                           {surah.id}
                         </div>
                         <div className="flex-1 text-right mr-3" dir="rtl">
-                          <h3 className="font-bold font-arabic">{surah.name_ar}</h3>
+                          <h3 className="font-bold font-amiri">{surah.name_ar}</h3>
                           <p className="text-xs text-muted-foreground">{surah.name_en}</p>
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -201,7 +223,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                 {selectedSurah.id !== 9 && currentPage === 1 && (
                   <div className="text-center mb-8">
                     <div className="inline-block border border-amber-300 dark:border-amber-600 rounded-full px-8 py-3 bg-amber-50/50 dark:bg-amber-900/20">
-                      <p className="text-2xl leading-relaxed text-[#3c2f1b] dark:text-amber-200" style={{ fontFamily: 'Amiri, serif' }} dir="rtl">
+                      <p className="text-2xl leading-relaxed text-[#3c2f1b] dark:text-amber-200 font-amiri" dir="rtl">
                         بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                       </p>
                     </div>
@@ -209,7 +231,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                 )}
 
                 {/* Verses with Traditional Layout */}
-                <div className="space-y-1 text-right leading-loose" dir="rtl" style={{ fontSize: '24px', lineHeight: '2.2', fontFamily: 'Amiri, serif' }}>
+                <div className="space-y-1 text-right leading-loose font-amiri" dir="rtl" style={{ fontSize: '24px', lineHeight: '2.2' }}>
                   {currentVerses.map((verse, index) => (
                     <span key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
                       <span className="text-black dark:text-gray-100 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 px-1 rounded transition-colors">
@@ -230,7 +252,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                 {/* Page Number Pill */}
                 <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
                   <div className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full px-4 py-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-300" style={{ fontFamily: 'Inter, sans-serif' }}>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {currentPage}
                     </span>
                   </div>
@@ -244,6 +266,9 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                 <p className="text-lg text-amber-700 dark:text-amber-300">لا توجد آيات متاحة لهذه السورة</p>
                 <p className="text-sm text-muted-foreground mt-2">
                   السورة: {selectedSurah.name_ar} - الآيات المطلوبة: {selectedSurah.ayah_count}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  عدد الآيات المحملة: {verses.length}
                 </p>
               </div>
             </div>
@@ -348,7 +373,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2 text-amber-800 dark:text-amber-200" style={{ fontFamily: 'Amiri, serif' }}>
+          <h1 className="text-4xl font-bold mb-2 text-amber-800 dark:text-amber-200 font-amiri">
             المصحف الشريف
           </h1>
           <p className="text-amber-600 dark:text-amber-300">فهرس سور القرآن الكريم</p>
@@ -380,7 +405,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                       {surah.id}
                     </div>
                     <div className="text-right" dir="rtl">
-                      <h3 className="text-xl font-bold text-amber-800 dark:text-amber-200 mb-1" style={{ fontFamily: 'Amiri, serif' }}>
+                      <h3 className="text-xl font-bold text-amber-800 dark:text-amber-200 mb-1 font-amiri">
                         {surah.name_ar}
                       </h3>
                       <p className="text-sm text-amber-600 dark:text-amber-400">{surah.name_en}</p>
