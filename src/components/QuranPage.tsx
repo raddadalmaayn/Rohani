@@ -18,8 +18,8 @@ interface Surah {
 }
 
 interface Verse {
-  surah_no: number;
-  ayah_no_surah: number;
+  surah_no: number | bigint;
+  ayah_no_surah: number | bigint;
   ayah_ar: string;
   ayah_en: string | null;
 }
@@ -239,9 +239,9 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                       </span>
                       {/* Ayah Circle Marker */}
                       <span className="inline-block mx-1 align-middle">
-                        <span className="inline-flex items-center justify-center w-6 h-6 bg-amber-100 dark:bg-amber-800 border border-amber-400 dark:border-amber-600 rounded-full text-xs font-bold text-[#3c2f1b] dark:text-amber-200">
-                          {verse.ayah_no_surah}
-                        </span>
+                         <span className="inline-flex items-center justify-center w-6 h-6 bg-amber-100 dark:bg-amber-800 border border-amber-400 dark:border-amber-600 rounded-full text-xs font-bold text-[#3c2f1b] dark:text-amber-200">
+                           {Number(verse.ayah_no_surah)}
+                         </span>
                       </span>
                       {/* Add spacing between verses */}
                       <span className="inline-block w-2"></span>
