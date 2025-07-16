@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Navigation } from '@/components/Navigation';
-import { ChevronLeft, ChevronRight, Search, BookOpen, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, BookOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -73,42 +72,90 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
   const loadVerses = async (surahId: number) => {
     setIsLoading(true);
     try {
-      console.log('Loading verses for surah:', surahId);
+      console.log('🔍 Loading verses for surah:', surahId, 'type:', typeof surahId);
       
-      // First, let's check what columns exist in the verses table
-      const { data: testData, error: testError } = await supabase
-        .from('verses')
-        .select('*')
-        .limit(1);
-      
-      if (testData && testData.length > 0) {
-        console.log('Sample verse data structure:', Object.keys(testData[0]));
-        console.log('Sample verse:', testData[0]);
-      }
-
-      const { data, error } = await supabase
+      // Test 1: Direct query with number
+      console.log('📋 Trying direct number query...');
+      const { data: numberQuery, error: numberError } = await supabase
         .from('verses')
         .select('surah_no, ayah_no_surah, ayah_ar, ayah_en')
         .eq('surah_no', surahId)
-        .order('ayah_no_surah');
+        .order('ayah_no_surah')
+        .limit(5);
+      
+      console.log('📊 Number query result:', { 
+        data: numberQuery, 
+        error: numberError, 
+        count: numberQuery?.length || 0 
+      });
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+      if (numberQuery && numberQuery.length > 0) {
+        // Success! Get all verses
+        const { data: allVerses, error: allError } = await supabase
+          .from('verses')
+          .select('surah_no, ayah_no_surah, ayah_ar, ayah_en')
+          .eq('surah_no', surahId)
+          .order('ayah_no_surah');
+        
+        if (allError) throw allError;
+        console.log('✅ Loaded', allVerses?.length, 'verses for surah', surahId);
+        setVerses(allVerses || []);
+        setCurrentPage(1);
+        return;
       }
+
+      // Test 2: Check if RLS is blocking access
+      console.log('🔒 Testing RLS access...');
+      const { data: rlsTest, error: rlsError } = await supabase
+        .from('verses')
+        .select('surah_no')
+        .limit(1);
       
-      console.log('Verses loaded:', data?.length);
-      console.log('First few verses:', data?.slice(0, 3));
+      console.log('🔐 RLS test result:', { data: rlsTest, error: rlsError });
+
+      // Test 3: Using bigint comparison
+      console.log('📊 Trying bigint comparison...');
+      const { data: bigintQuery, error: bigintError } = await supabase
+        .from('verses')
+        .select('surah_no, ayah_no_surah, ayah_ar, ayah_en')
+        .filter('surah_no', 'eq', surahId)
+        .order('ayah_no_surah')
+        .limit(5);
       
-      setVerses(data || []);
+      console.log('📈 Bigint query result:', { 
+        data: bigintQuery, 
+        error: bigintError, 
+        count: bigintQuery?.length || 0 
+      });
+
+      if (bigintQuery && bigintQuery.length > 0) {
+        // Success! Get all verses
+        const { data: allVerses, error: allError } = await supabase
+          .from('verses')
+          .select('surah_no, ayah_no_surah, ayah_ar, ayah_en')
+          .filter('surah_no', 'eq', surahId)
+          .order('ayah_no_surah');
+        
+        if (allError) throw allError;
+        console.log('✅ Loaded', allVerses?.length, 'verses for surah', surahId);
+        setVerses(allVerses || []);
+        setCurrentPage(1);
+        return;
+      }
+
+      // If we get here, no data found
+      console.log('❌ No verses found for surah', surahId);
+      setVerses([]);
       setCurrentPage(1);
+      
     } catch (error) {
-      console.error('Error loading verses:', error);
+      console.error('💥 Error loading verses:', error);
       toast({
         title: 'خطأ في التحميل',
         description: 'حدث خطأ أثناء تحميل آيات السورة',
         variant: 'destructive',
       });
+      setVerses([]);
     } finally {
       setIsLoading(false);
     }
