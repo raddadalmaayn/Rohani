@@ -323,7 +323,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
         </div>
 
         {/* Navigation Controls */}
-        <div className="h-16 bg-white dark:bg-gray-900 border-t border-amber-200 dark:border-amber-700 flex items-center justify-between px-4">
+        <div className="h-16 bg-white dark:bg-gray-900 border-t border-amber-200 dark:border-amber-700 flex items-center justify-between px-4 relative z-50">
           <Button
             variant="outline"
             onClick={goToPrevSurah}
@@ -335,18 +335,18 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
           </Button>
 
           {/* Page Navigation */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative z-50">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="text-amber-700 border-amber-300"
+              className="text-amber-700 border-amber-300 bg-white dark:bg-gray-900"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
             
-            <span className="text-sm px-4 py-2 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-800 dark:text-amber-200">
+            <span className="text-sm px-6 py-2 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 shadow-md font-semibold">
               صفحة {currentPage} من {totalPages}
             </span>
             
@@ -355,7 +355,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
               size="sm"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
-              className="text-amber-700 border-amber-300"
+              className="text-amber-700 border-amber-300 bg-white dark:bg-gray-900"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
