@@ -401,7 +401,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
 
         {/* Floating Navigation */}
         {onNavigate && (
-          <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
             <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-amber-200 dark:border-amber-700 rounded-full shadow-lg px-2 py-2">
               <Navigation 
                 currentView="quran" 
