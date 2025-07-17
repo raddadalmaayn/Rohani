@@ -385,31 +385,6 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
           </Button>
         </div>
 
-        {/* Ask Quran Floating Button */}
-        {onNavigate && (
-          <div className="fixed bottom-20 right-6 z-50">
-            <Button
-              onClick={() => onNavigate('ask')}
-              className="bg-amber-600 hover:bg-amber-700 text-white shadow-lg rounded-full p-4"
-              size="lg"
-            >
-              <Search className="h-5 w-5 mr-2" />
-              اسأل القرآن
-            </Button>
-          </div>
-        )}
-
-        {/* Floating Navigation */}
-        {onNavigate && (
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
-            <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border border-amber-200 dark:border-amber-700 rounded-full shadow-lg px-2 py-2">
-              <Navigation 
-                currentView="quran" 
-                onViewChange={onNavigate}
-              />
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -474,9 +449,9 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
           ))}
         </div>
 
-        {/* Bottom Navigation */}
+        {/* Bottom Navigation - Hidden on mobile */}
         {onNavigate && (
-          <div className="fixed bottom-0 left-0 right-0 z-50">
+          <div className="fixed bottom-0 left-0 right-0 z-50 hidden md:block">
             <Navigation 
               currentView="quran" 
               onViewChange={onNavigate}
