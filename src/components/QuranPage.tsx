@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -7,6 +7,7 @@ import { Navigation } from '@/components/Navigation';
 import { ChevronLeft, ChevronRight, Search, BookOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Surah {
   id: number;
@@ -37,6 +38,12 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showSurahPicker, setShowSurahPicker] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+  
+  // Refs for scroll and touch handling
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
 
   const versesPerPage = 15;
 
@@ -196,6 +203,68 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
   const totalPages = Math.ceil(verses.length / versesPerPage);
   const currentVerses = verses.slice((currentPage - 1) * versesPerPage, currentPage * versesPerPage);
 
+  // Enhanced navigation functions
+  const goToNextPage = useCallback(() => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (selectedSurah && selectedSurah.id < 114) {
+      // Go to next surah if at last page
+      goToNextSurah();
+    }
+  }, [currentPage, totalPages, selectedSurah]);
+
+  const goToPrevPage = useCallback(() => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (selectedSurah && selectedSurah.id > 1) {
+      // Go to previous surah if at first page
+      goToPrevSurah();
+    }
+  }, [currentPage, selectedSurah]);
+
+  // Scroll event handler for automatic page navigation
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (!isMobile) return; // Only enable scroll navigation on mobile
+    
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+    
+    // If scrolled to bottom (95% threshold), go to next page
+    if (scrollPercentage > 0.95) {
+      goToNextPage();
+    }
+  }, [isMobile, goToNextPage]);
+
+  // Touch event handlers for swipe navigation
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isMobile) return;
+    
+    const touch = e.touches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  }, [isMobile]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!isMobile) return;
+    
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - touchStartX.current;
+    const deltaY = touch.clientY - touchStartY.current;
+    
+    // Only trigger swipe if horizontal movement is greater than vertical
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+      if (deltaX > 0) {
+        // Swipe right - go to previous page
+        goToPrevPage();
+      } else {
+        // Swipe left - go to next page
+        goToNextPage();
+      }
+    }
+  }, [isMobile, goToNextPage, goToPrevPage]);
+
   if (currentView === 'reader' && selectedSurah) {
     return (
       <div className="fixed inset-0 bg-[#faf9f6] dark:bg-[#0d0d0d] z-50 overflow-hidden">
@@ -253,7 +322,14 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
         </Dialog>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-auto" style={{ height: 'calc(100vh - 10rem)' }}>
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-auto" 
+          style={{ height: 'calc(100vh - 10rem)' }}
+          onScroll={handleScroll}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -305,6 +381,15 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                   </div>
                 </div>
               </div>
+              
+              {/* Mobile Navigation Hints */}
+              {isMobile && (
+                <div className="absolute top-6 right-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 border border-amber-200 dark:border-amber-700">
+                  <p className="font-semibold mb-1">التنقل:</p>
+                  <p>• مرر لأسفل للصفحة التالية</p>
+                  <p>• اسحب يمينًا/يسارًا للتنقل</p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">
@@ -339,8 +424,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
+              onClick={goToPrevPage}
+              disabled={currentPage === 1 && (!selectedSurah || selectedSurah.id === 1)}
               className="text-amber-700 border-amber-300 bg-white dark:bg-gray-900"
             >
               <ChevronRight className="h-4 w-4" />
@@ -353,8 +438,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages && (!selectedSurah || selectedSurah.id === 114)}
               className="text-amber-700 border-amber-300 bg-white dark:bg-gray-900"
             >
               <ChevronLeft className="h-4 w-4" />
