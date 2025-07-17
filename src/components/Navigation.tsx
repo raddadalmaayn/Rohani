@@ -8,7 +8,7 @@ interface NavigationProps {
 
 export function Navigation({ currentView, onViewChange }: NavigationProps) {
   const navItems = [
-    { id: 'scripture', label: 'اسأل القرآن', icon: Search },
+    { id: 'scripture', label: 'اسأل روحاني', icon: Search },
     { id: 'quran', label: 'المصحف', icon: BookOpen },
     { id: 'calendar', label: 'التقويم', icon: Calendar },
     { id: 'dashboard', label: 'إحصائيات', icon: TrendingUp },
