@@ -382,14 +382,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                 </div>
               </div>
               
-              /* {/* Mobile Navigation Hints */}
-              {isMobile && (
-                <div className="absolute top-6 right-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 border border-amber-200 dark:border-amber-700">
-                  <p className="font-semibold mb-1">التنقل:</p>
-                  <p>• مرر لأسفل للصفحة التالية</p>
-                  <p>• اسحب يمينًا/يسارًا للتنقل</p>
-                </div>
-              )} */
+            
 
               {/* 📱 Mobile Navigation Guide */}
 {isMobile && (
