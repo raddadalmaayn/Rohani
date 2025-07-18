@@ -45,7 +45,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
 
-  const versesPerPage = 15;
+  // Traditional Quran page settings
+  const versesPerPage = 10; // More traditional division with fewer verses per page
 
   useEffect(() => {
     loadSurahs();
@@ -255,16 +256,21 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
 
   if (currentView === 'reader' && selectedSurah) {
     return (
-      <div className="fixed inset-0 bg-[#faf9f6] dark:bg-[#0d0d0d] z-50 overflow-hidden">
+      <div className="fixed inset-0 bg-[#f8f6f0] dark:bg-[#1a1611] z-50 overflow-hidden" style={{ fontFamily: '"Scheherazade New", "Amiri Quran", serif' }}>
         {/* Ornamental Surah Header */}
         <Dialog open={showSurahPicker} onOpenChange={setShowSurahPicker}>
           <DialogTrigger asChild>
-            <div className="h-14 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-b-2 border-amber-200 dark:border-amber-700 flex items-center justify-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
+            <div className="h-16 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-b-2 border-amber-200 dark:border-amber-700 flex items-center justify-center cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
               <div className="text-center">
-                <h1 className="text-xl font-bold text-[#3c2f1b] dark:text-amber-200 font-amiri">
-                  سُورَةُ {selectedSurah.name_ar}
-                </h1>
-                <p className="text-xs text-amber-700 dark:text-amber-300">{selectedSurah.name_en}</p>
+                {/* Traditional Surah Header with Decoration */}
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-8 h-0.5 bg-amber-600 dark:bg-amber-400"></div>
+                  <h1 className="text-2xl font-bold text-[#3c2f1b] dark:text-amber-200 font-othmani">
+                    سُورَةُ {selectedSurah.name_ar}
+                  </h1>
+                  <div className="w-8 h-0.5 bg-amber-600 dark:bg-amber-400"></div>
+                </div>
+                <p className="text-sm text-amber-700 dark:text-amber-300 font-arabic mt-1">{selectedSurah.name_en}</p>
               </div>
             </div>
           </DialogTrigger>
@@ -313,7 +319,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
         <div 
           ref={scrollContainerRef}
           className="flex-1 overflow-hidden" 
-          style={{ height: 'calc(100vh - 10rem)' }}
+          style={{ height: 'calc(100vh - 12rem)' }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -327,47 +333,70 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
           ) : currentVerses.length > 0 ? (
             <div className="h-full flex items-center justify-center p-6">
               {/* Traditional Mushaf Page */}
-              <div className="bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-700 rounded-lg shadow-xl w-full max-w-4xl h-full flex flex-col p-8 relative overflow-hidden">
+              {/* Traditional Othmani Mushaf Page */}
+              <div className="bg-[#fefdfb] dark:bg-[#1f1d18] border-2 border-amber-300 dark:border-amber-600 rounded-none shadow-2xl w-full max-w-5xl h-full flex flex-col relative overflow-hidden" style={{ 
+                boxShadow: 'inset 0 0 20px rgba(184, 134, 11, 0.1), 0 8px 32px rgba(0, 0, 0, 0.12)',
+                background: 'linear-gradient(135deg, #fefdfb 0%, #faf8f3 100%)'
+              }}>
+                
+                {/* Traditional Page Borders and Decoration */}
+                <div className="absolute inset-4 border border-amber-400 dark:border-amber-500 rounded-sm opacity-60"></div>
+                <div className="absolute inset-6 border border-amber-300 dark:border-amber-600 rounded-sm opacity-40"></div>
+                
+                {/* Page Content with Traditional Margins */}
+                <div className="p-12 h-full flex flex-col">
                 
                 {/* Basmala - only for non-Tawbah surahs and first page */}
                 {selectedSurah.id !== 9 && currentPage === 1 && (
-                  <div className="text-center mb-8">
-                    <div className="inline-block border border-amber-300 dark:border-amber-600 rounded-full px-8 py-3 bg-amber-50/50 dark:bg-amber-900/20">
-                      <p className="text-2xl leading-relaxed text-[#3c2f1b] dark:text-amber-200 font-amiri" dir="rtl">
+                  <div className="text-center mb-12">
+                    <div className="relative">
+                      {/* Decorative frame for Basmala */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-200/30 to-transparent rounded-full"></div>
+                      <p className="text-3xl leading-relaxed text-[#2d2416] dark:text-amber-100 font-othmani relative py-4" dir="rtl">
                         بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* Verses with Traditional Layout */}
+                {/* Traditional Othmani Verses Layout */}
                 <div className="flex-1 overflow-hidden">
-                  <div className="space-y-1 text-right leading-loose font-amiri h-full overflow-hidden" dir="rtl" style={{ fontSize: '24px', lineHeight: '2.2' }}>
-                  {currentVerses.map((verse, index) => (
-                    <span key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
-                      <span className="text-black dark:text-gray-100 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 px-1 rounded transition-colors">
-                        {verse.ayah_ar}
-                      </span>
-                      {/* Ayah Circle Marker */}
-                      <span className="inline-block mx-1 align-middle">
-                         <span className="inline-flex items-center justify-center w-6 h-6 bg-amber-100 dark:bg-amber-800 border border-amber-400 dark:border-amber-600 rounded-full text-xs font-bold text-[#3c2f1b] dark:text-amber-200">
-                           {Number(verse.ayah_no_surah)}
-                         </span>
-                      </span>
-                      {/* Add spacing between verses */}
-                      <span className="inline-block w-2"></span>
-                    </span>
-                  ))}
+                  <div className="h-full overflow-hidden text-right font-othmani" dir="rtl" style={{ 
+                    fontSize: '28px', 
+                    lineHeight: '2.8',
+                    letterSpacing: '0.02em'
+                  }}>
+                    {currentVerses.map((verse, index) => (
+                      <div key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="mb-6">
+                        {/* Verse text in traditional style */}
+                        <span className="text-[#1a1611] dark:text-amber-50 leading-loose inline">
+                          {verse.ayah_ar}
+                        </span>
+                        {/* Traditional Ayah Number in decorative circle */}
+                        <span className="inline-block mx-3 align-middle">
+                          <span 
+                            className="inline-flex items-center justify-center w-8 h-8 border-2 border-amber-500 dark:border-amber-400 rounded-full text-base font-bold text-amber-700 dark:text-amber-300 relative"
+                            style={{ 
+                              background: 'radial-gradient(circle, rgba(252, 211, 77, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)'
+                            }}
+                          >
+                            {Number(verse.ayah_no_surah)}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Page Number Pill */}
-                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-full px-4 py-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                {/* Traditional Page Number */}
+                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-amber-100 dark:bg-amber-900/40 border-2 border-amber-400 dark:border-amber-600 rounded-lg px-6 py-3 shadow-lg">
+                    <span className="text-lg font-bold text-amber-800 dark:text-amber-200 font-arabic">
                       {currentPage}
                     </span>
                   </div>
+                </div>
+
                 </div>
               </div>
               
