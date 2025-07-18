@@ -224,18 +224,6 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
     }
   }, [currentPage, selectedSurah]);
 
-  // Scroll event handler for automatic page navigation
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    if (!isMobile) return; // Only enable scroll navigation on mobile
-    
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
-    
-    // If scrolled to bottom (99% threshold for less sensitivity), go to next page
-    if (scrollPercentage > 0.99) {
-      goToNextPage();
-    }
-  }, [isMobile, goToNextPage]);
 
   // Touch event handlers for swipe navigation
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -324,9 +312,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
         {/* Main Content Area */}
         <div 
           ref={scrollContainerRef}
-          className="flex-1 overflow-auto" 
+          className="flex-1 overflow-hidden" 
           style={{ height: 'calc(100vh - 10rem)' }}
-          onScroll={handleScroll}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -338,9 +325,9 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
               </div>
             </div>
           ) : currentVerses.length > 0 ? (
-            <div className="max-w-4xl mx-auto p-6">
+            <div className="h-full flex items-center justify-center p-6">
               {/* Traditional Mushaf Page */}
-              <div className="bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-700 rounded-lg shadow-xl min-h-[700px] p-8 relative">
+              <div className="bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-700 rounded-lg shadow-xl w-full max-w-4xl h-full flex flex-col p-8 relative overflow-hidden">
                 
                 {/* Basmala - only for non-Tawbah surahs and first page */}
                 {selectedSurah.id !== 9 && currentPage === 1 && (
@@ -354,7 +341,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                 )}
 
                 {/* Verses with Traditional Layout */}
-                <div className="space-y-1 text-right leading-loose font-amiri" dir="rtl" style={{ fontSize: '24px', lineHeight: '2.2' }}>
+                <div className="flex-1 overflow-hidden">
+                  <div className="space-y-1 text-right leading-loose font-amiri h-full overflow-hidden" dir="rtl" style={{ fontSize: '24px', lineHeight: '2.2' }}>
                   {currentVerses.map((verse, index) => (
                     <span key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
                       <span className="text-black dark:text-gray-100 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 px-1 rounded transition-colors">
@@ -370,6 +358,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                       <span className="inline-block w-2"></span>
                     </span>
                   ))}
+                  </div>
                 </div>
 
                 {/* Page Number Pill */}
