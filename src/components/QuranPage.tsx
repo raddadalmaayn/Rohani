@@ -231,8 +231,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
     
-    // If scrolled to bottom (95% threshold), go to next page
-    if (scrollPercentage > 0.95) {
+    // If scrolled to bottom (99% threshold for less sensitivity), go to next page
+    if (scrollPercentage > 0.99) {
       goToNextPage();
     }
   }, [isMobile, goToNextPage]);
@@ -256,11 +256,11 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
     // Only trigger swipe if horizontal movement is greater than vertical
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
       if (deltaX > 0) {
-        // Swipe right - go to previous page
-        goToPrevPage();
-      } else {
-        // Swipe left - go to next page
+        // Swipe right - go to next page (Arabic reading direction)
         goToNextPage();
+      } else {
+        // Swipe left - go to previous page (Arabic reading direction)
+        goToPrevPage();
       }
     }
   }, [isMobile, goToNextPage, goToPrevPage]);
@@ -384,16 +384,6 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
               
             
 
-              {/* 📱 Mobile Navigation Guide */}
-{isMobile && (
-  <div className="absolute top-5 right-5 bg-white/90 dark:bg-gray-900/80 backdrop-blur-md rounded-xl p-4 text-sm leading-relaxed text-gray-700 dark:text-gray-200 border border-amber-300 dark:border-amber-600 shadow-lg z-50">
-    <p className="font-bold mb-2">إرشادات التنقل:</p>
-    <ul className="list-disc list-inside space-y-1 rtl:text-right">
-      <li>مرر لأسفل للانتقال للصفحة التالية</li>
-      <li>اسحب يمينًا أو يسارًا للتنقل بين الصفحات</li>
-    </ul>
-  </div>
-)}
 
             </div>
           ) : (
