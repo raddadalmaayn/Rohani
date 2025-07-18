@@ -46,7 +46,7 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
   const touchStartY = useRef<number>(0);
 
   // Traditional Quran page settings
-  const versesPerPage = 10; // More traditional division with fewer verses per page
+  const versesPerPage = 15; // Adjusted for smaller font size
 
   useEffect(() => {
     loadSurahs();
@@ -361,21 +361,21 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
 
                 {/* Traditional Othmani Verses Layout */}
                 <div className="flex-1 overflow-hidden">
-                  <div className="h-full overflow-hidden text-right font-othmani" dir="rtl" style={{ 
-                    fontSize: '28px', 
-                    lineHeight: '2.8',
-                    letterSpacing: '0.02em'
+                  <div className="h-full overflow-y-auto text-right font-othmani" dir="rtl" style={{ 
+                    fontSize: '20px', 
+                    lineHeight: '2.2',
+                    letterSpacing: '0.01em'
                   }}>
                     {currentVerses.map((verse, index) => (
-                      <div key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="mb-6">
+                      <div key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="mb-3">
                         {/* Verse text in traditional style */}
-                        <span className="text-[#1a1611] dark:text-amber-50 leading-loose inline">
+                        <span className="text-[#1a1611] dark:text-amber-50 leading-relaxed inline">
                           {verse.ayah_ar}
                         </span>
                         {/* Traditional Ayah Number in decorative circle */}
-                        <span className="inline-block mx-3 align-middle">
+                        <span className="inline-block mx-2 align-middle">
                           <span 
-                            className="inline-flex items-center justify-center w-8 h-8 border-2 border-amber-500 dark:border-amber-400 rounded-full text-base font-bold text-amber-700 dark:text-amber-300 relative"
+                            className="inline-flex items-center justify-center w-6 h-6 border border-amber-500 dark:border-amber-400 rounded-full text-xs font-bold text-amber-700 dark:text-amber-300 relative"
                             style={{ 
                               background: 'radial-gradient(circle, rgba(252, 211, 77, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)'
                             }}
