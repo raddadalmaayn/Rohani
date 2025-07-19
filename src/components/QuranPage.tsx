@@ -360,8 +360,8 @@ export function QuranPage({ onNavigate }: QuranPageProps = {}) {
                 )}
 
                 {/* Traditional Othmani Verses Layout */}
-                <div className="flex-1 overflow-hidden">
-                  <div className="h-full overflow-y-auto text-right font-othmani" dir="rtl" style={{ 
+                <div className="flex-1 overflow-y-auto">
+                  <div className="text-right font-othmani px-2" dir="rtl" style={{ 
                     fontSize: '20px', 
                     lineHeight: '2.2',
                     letterSpacing: '0.01em'
