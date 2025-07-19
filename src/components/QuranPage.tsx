@@ -24,7 +24,7 @@ interface Verse {
   ayah_en?: string;
 }
 
-interface QuranPage {
+interface QuranPageData {
   pageNumber: number;
   verses: Verse[];
   startSurah?: string;
@@ -36,7 +36,7 @@ const QuranPage: React.FC = () => {
   const [selectedSurah, setSelectedSurah] = useState<Surah | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [quranPages, setQuranPages] = useState<QuranPage[]>([]);
+  const [quranPages, setQuranPages] = useState<QuranPageData[]>([]);
   const [loading, setLoading] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
   const [showTafsir, setShowTafsir] = useState(false);
@@ -118,8 +118,8 @@ const QuranPage: React.FC = () => {
     }
   };
 
-  const createPages = (allVerses: Verse[]): QuranPage[] => {
-    const pages: QuranPage[] = [];
+  const createPages = (allVerses: Verse[]): QuranPageData[] => {
+    const pages: QuranPageData[] = [];
     let pageNumber = 1;
     
     for (let i = 0; i < allVerses.length; i += versesPerPage) {
