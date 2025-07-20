@@ -8,6 +8,8 @@ import QuranPage from '@/components/QuranPage';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LanguageToggle } from '@/components/LanguageToggle';
+import { useLanguage } from '@/hooks/use-language';
 import heroImage from '@/assets/hero-spiritual.jpg';
 
 interface OnboardingData {
@@ -20,6 +22,7 @@ const Index = () => {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [userData, setUserData] = useState<OnboardingData | null>(null);
   const [currentView, setCurrentView] = useState('scripture');
+  const { t, language } = useLanguage();
 
   const handleOnboardingComplete = (data: OnboardingData) => {
     setUserData(data);
@@ -61,10 +64,10 @@ const Index = () => {
           <div className="min-h-screen bg-gradient-calm flex items-center justify-center p-4">
             <div className="text-center max-w-md">
               <div className="text-6xl mb-4">👤</div>
-              <h2 className="text-2xl font-bold mb-4 font-arabic">الملف الشخصي</h2>
-              <p className="text-muted-foreground mb-6 font-arabic">مرحباً بك في روحاني</p>
-              <Button onClick={handleSignOut} variant="outline" className="font-arabic">
-                إعادة بدء التطبيق
+              <h2 className={`text-2xl font-bold mb-4 ${language === 'ar' ? 'font-arabic' : ''}`}>{t('profile.title')}</h2>
+              <p className={`text-muted-foreground mb-6 ${language === 'ar' ? 'font-arabic' : ''}`}>{t('profile.welcome')}</p>
+              <Button onClick={handleSignOut} variant="outline" className={language === 'ar' ? 'font-arabic' : ''}>
+                {t('profile.restart')}
               </Button>
             </div>
           </div>
@@ -87,12 +90,13 @@ const Index = () => {
         style={{ backgroundImage: `url(${heroImage})` }}
       >
         <div className="absolute inset-0 bg-primary/20" />
-        <div className="absolute bottom-4 left-4 text-white">
-          <h1 className="text-2xl font-bold font-arabic">روحاني</h1>
-          <p className="text-white/90 font-arabic">دقيقة سكينة… كلما تعب قلبك</p>
+        <div className={`absolute bottom-4 ${language === 'ar' ? 'left-4' : 'right-4'} text-white`}>
+          <h1 className={`text-2xl font-bold ${language === 'ar' ? 'font-arabic' : ''}`}>{t('header.title')}</h1>
+          <p className={`text-white/90 ${language === 'ar' ? 'font-arabic' : ''}`}>{t('header.subtitle')}</p>
         </div>
-        <div className="absolute top-4 right-4">
+        <div className={`absolute top-4 ${language === 'ar' ? 'right-4' : 'left-4'} flex gap-2`}>
           <ThemeToggle />
+          <LanguageToggle />
         </div>
       </div>
 

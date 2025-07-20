@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Home, Search, BarChart3, User, Heart, Calendar, TrendingUp, BookOpen } from 'lucide-react';
+import { useLanguage } from '@/hooks/use-language';
 
 interface NavigationProps {
   currentView: string;
@@ -7,12 +8,14 @@ interface NavigationProps {
 }
 
 export function Navigation({ currentView, onViewChange }: NavigationProps) {
+  const { t, language } = useLanguage();
+  
   const navItems = [
-    { id: 'scripture', label: 'اسأل روحاني', icon: Search },
-    { id: 'quran', label: 'المصحف', icon: BookOpen },
-    { id: 'calendar', label: 'التقويم', icon: Calendar },
-    { id: 'dashboard', label: 'إحصائيات', icon: TrendingUp },
-    { id: 'profile', label: 'الملف', icon: User }
+    { id: 'scripture', label: t('nav.scripture'), icon: Search },
+    { id: 'quran', label: t('nav.quran'), icon: BookOpen },
+    { id: 'calendar', label: t('nav.calendar'), icon: Calendar },
+    { id: 'dashboard', label: t('nav.dashboard'), icon: TrendingUp },
+    { id: 'profile', label: t('nav.profile'), icon: User }
   ];
 
   return (
@@ -34,7 +37,7 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
                 onClick={() => onViewChange(item.id)}
               >
                 <IconComponent className="h-4 w-4" />
-                <span className="text-xs font-arabic leading-none">{item.label}</span>
+                <span className={`text-xs leading-none ${language === 'ar' ? 'font-arabic' : ''}`}>{item.label}</span>
               </Button>
             );
           })}
