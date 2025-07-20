@@ -52,7 +52,7 @@ const Index = () => {
           />
         );
       case 'quran':
-        return <QuranPage />;
+        return <QuranPage onNavigateHome={() => setCurrentView('scripture')} />;
       case 'bookmarks':
         return <BookmarksView />;
       case 'dashboard':
@@ -79,7 +79,7 @@ const Index = () => {
 
   // Full-screen layout for Quran page
   if (currentView === 'quran') {
-    return <QuranPage />;
+    return <QuranPage onNavigateHome={() => setCurrentView('scripture')} />;
   }
 
   return (

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, BookOpen, Settings, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BookOpen, Settings, Search, Home } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,7 +31,11 @@ interface QuranPageData {
   endSurah?: string;
 }
 
-const QuranPage: React.FC = () => {
+interface QuranPageProps {
+  onNavigateHome?: () => void;
+}
+
+const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [selectedSurah, setSelectedSurah] = useState<Surah | null>(null);
   const [verses, setVerses] = useState<Verse[]>([]);
@@ -261,6 +265,18 @@ const QuranPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {onNavigateHome && (
+              <Button
+                onClick={onNavigateHome}
+                variant="outline"
+                size="sm"
+                className="text-amber-700 border-amber-300"
+              >
+                <Home className="h-4 w-4 ml-1" />
+                الرئيسية
+              </Button>
+            )}
+            
             <Button
               onClick={() => setShowTranslation(!showTranslation)}
               variant={showTranslation ? "default" : "outline"}
