@@ -10,6 +10,7 @@ import { SearchLoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { SearchWithHistory } from '@/components/SearchWithHistory';
 import { useSearchHistory } from '@/hooks/use-search-history';
 import { useUserProgress } from '@/hooks/use-user-progress';
+import { useLanguage } from '@/hooks/use-language';
 
 interface ScriptureResult {
   id: string;
@@ -43,6 +44,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
   const { toast } = useToast();
   const { saveSearch } = useSearchHistory();
   const { updateProgress } = useUserProgress();
+  const { t, language: currentLanguage } = useLanguage();
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -193,8 +195,8 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">نصوص وهَدى</h1>
-          <p className="text-muted-foreground">اسأل واحصل على نصوص روحية ونصائح عملية</p>
+          <h1 className={`text-3xl font-bold mb-2 ${currentLanguage === 'ar' ? 'font-arabic' : ''}`}>{t('ask.title')}</h1>
+          <p className={`text-muted-foreground ${currentLanguage === 'ar' ? 'font-arabic' : ''}`}>{t('ask.subtitle')}</p>
         </div>
 
         {/* Search Bar */}
@@ -216,28 +218,28 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
             {isSensitive && (
               <Card className="shadow-gentle border-l-4 border-l-amber-500 bg-amber-50/50">
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-600" />
-                    <p className="text-sm text-amber-800">
-                      هذا السؤال يحتاج إلى استشارة أهل العلم المختصين للحصول على فتوى صحيحة.
-                    </p>
-                  </div>
+                   <div className="flex items-center gap-3">
+                     <AlertTriangle className="h-5 w-5 text-amber-600" />
+                     <p className={`text-sm text-amber-800 ${currentLanguage === 'ar' ? 'font-arabic' : ''}`}>
+                       {t('ask.warning')}
+                     </p>
+                   </div>
                 </CardContent>
               </Card>
             )}
 
 
             {/* AI Generated Tips */}
-            {!isSensitive && practicalTip && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-secondary" />
-                  نصيحة عملية
-                </h2>
+             {!isSensitive && practicalTip && (
+               <div className="space-y-4">
+                 <h2 className={`text-xl font-semibold flex items-center gap-2 ${currentLanguage === 'ar' ? 'font-arabic' : ''}`}>
+                   <Sparkles className="h-5 w-5 text-secondary" />
+                   {t('ask.practical.title')}
+                 </h2>
                 
                 <Card className="shadow-spiritual border-l-4 border-l-primary">
-                  <CardContent className="p-6">
-                    <div className="text-lg leading-relaxed text-right whitespace-pre-line font-arabic" dir="rtl">
+                   <CardContent className="p-6">
+                     <div className={`text-lg leading-relaxed ${currentLanguage === 'ar' ? 'text-right font-arabic' : 'text-left'} whitespace-pre-line`} dir={currentLanguage === 'ar' ? 'rtl' : 'ltr'}>
                       {practicalTip.split('\n').map((paragraph, index) => (
                         <p key={index} className="mb-4 last:mb-0">
                           {paragraph}
@@ -254,16 +256,16 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
               <div className="space-y-4">
                 <Card className="shadow-spiritual border-l-4 border-l-secondary bg-gradient-to-r from-secondary/5 to-transparent">
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center justify-between text-lg">
-                      <div className="flex items-center gap-2">
-                        <Heart className="h-5 w-5 text-secondary" />
-                        دعاء مقترح
-                      </div>
+                     <CardTitle className="flex items-center justify-between text-lg">
+                       <div className={`flex items-center gap-2 ${currentLanguage === 'ar' ? 'font-arabic' : ''}`}>
+                         <Heart className="h-5 w-5 text-secondary" />
+                         {t('ask.dua.title')}
+                       </div>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-lg leading-relaxed text-right text-secondary font-medium font-quran" dir="rtl">
-                      {dua}
+                   <CardContent>
+                     <p className={`text-lg leading-relaxed text-secondary font-medium ${currentLanguage === 'ar' ? 'text-right font-quran' : 'text-left'}`} dir={currentLanguage === 'ar' ? 'rtl' : 'ltr'}>
+                       {dua}
                     </p>
                   </CardContent>
                 </Card>
@@ -271,34 +273,33 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
             )}
             
             {/* Disclaimer */}
-            <Card className="shadow-gentle bg-muted/50">
-              <CardContent className="p-4 text-center">
-                <p className="text-sm text-muted-foreground">
-                  <strong>تنبيه مهم:</strong> هذه نصائح عامة وليست فتوى شرعية. 
-                  للاستفسارات الفقهية يُرجى الرجوع إلى أهل العلم المختصين.
-                </p>
-              </CardContent>
-            </Card>
+             <Card className="shadow-gentle bg-muted/50">
+               <CardContent className="p-4 text-center">
+                 <p className={`text-sm text-muted-foreground ${currentLanguage === 'ar' ? 'font-arabic' : ''}`}>
+                   <strong>{currentLanguage === 'ar' ? 'تنبيه مهم:' : 'Important Note:'}</strong> {t('ask.disclaimer')}
+                 </p>
+               </CardContent>
+             </Card>
           </div>
         )}
 
         {/* Empty State */}
         {!practicalTip && !dua && !isSearching && (
-          <Card className="shadow-gentle">
-            <CardContent className="p-12 text-center">
-              <div className="text-6xl mb-4">🌱</div>
-              <h3 className="text-xl font-semibold mb-2">ابحث عن الهداية</h3>
-              <p className="text-muted-foreground mb-4">
-                اكتب سؤالك في شريط البحث للحصول على نصوص روحية ونصائح عملية
-              </p>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>أمثلة للأسئلة:</p>
-                <p>• "كيف أجد السكينة في قلبي؟"</p>
-                <p>• "ما الذكر المناسب عند الهم؟"</p>
-                <p>• "كيف أثبت على الصلاة؟"</p>
-              </div>
-            </CardContent>
-          </Card>
+           <Card className="shadow-gentle">
+             <CardContent className="p-12 text-center">
+               <div className="text-6xl mb-4">🌱</div>
+               <h3 className={`text-xl font-semibold mb-2 ${currentLanguage === 'ar' ? 'font-arabic' : ''}`}>{t('ask.empty.title')}</h3>
+               <p className={`text-muted-foreground mb-4 ${currentLanguage === 'ar' ? 'font-arabic' : ''}`}>
+                 {t('ask.empty.description')}
+               </p>
+               <div className={`text-sm text-muted-foreground space-y-1 ${currentLanguage === 'ar' ? 'font-arabic' : ''}`}>
+                 <p>{t('ask.empty.examples')}</p>
+                 <p>• {t('ask.empty.example1')}</p>
+                 <p>• {t('ask.empty.example2')}</p>
+                 <p>• {t('ask.empty.example3')}</p>
+               </div>
+             </CardContent>
+           </Card>
         )}
       </div>
     </div>

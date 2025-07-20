@@ -14,6 +14,7 @@ import {
   Lightbulb
 } from 'lucide-react';
 import { useSearchHistory } from '@/hooks/use-search-history';
+import { useLanguage } from '@/hooks/use-language';
 
 interface SearchWithHistoryProps {
   onSearch: (query: string) => void;
@@ -29,6 +30,7 @@ export function SearchWithHistory({
   isSearching 
 }: SearchWithHistoryProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const { t, language } = useLanguage();
   const { 
     searchHistory, 
     suggestions, 
@@ -37,7 +39,7 @@ export function SearchWithHistory({
     clearHistory 
   } = useSearchHistory();
 
-  const commonQueries = [
+  const commonQueries = language === 'ar' ? [
     "كيف أجد السكينة؟",
     "دعاء الهم والحزن",
     "آيات الصبر",
@@ -46,6 +48,15 @@ export function SearchWithHistory({
     "آيات التوبة",
     "دعاء المريض",
     "فضل الذكر"
+  ] : [
+    "How do I find inner peace?",
+    "Prayers for anxiety and sadness",
+    "Verses about patience",
+    "Teachings on mercy",
+    "The virtue of seeking forgiveness",
+    "Verses about repentance",
+    "Prayer for the sick",
+    "The virtue of remembrance"
   ];
 
   useEffect(() => {
@@ -80,12 +91,13 @@ export function SearchWithHistory({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="اكتب سؤالك... مثل: كيف أجد السكينة؟"
+              placeholder={t('ask.placeholder')}
               value={currentQuery}
               onChange={(e) => onQueryChange(e.target.value)}
               onKeyPress={handleKeyPress}
               onFocus={() => currentQuery.length > 0 && setShowSuggestions(true)}
-              className="pl-10 font-arabic"
+              className={`pl-10 ${language === 'ar' ? 'font-arabic' : ''}`}
+              dir={language === 'ar' ? 'rtl' : 'ltr'}
             />
             {currentQuery && (
               <Button

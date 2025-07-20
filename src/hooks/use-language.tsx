@@ -29,6 +29,21 @@ const translations = {
     // Language switcher
     'language.current': 'العربية',
     'language.switch': 'English',
+    
+    // AskScripture
+    'ask.title': 'نصوص وهَدى',
+    'ask.subtitle': 'اسأل واحصل على نصوص روحية ونصائح عملية',
+    'ask.placeholder': 'اكتب سؤالك... مثل: كيف أجد السكينة؟',
+    'ask.empty.title': 'ابحث عن الهداية',
+    'ask.empty.description': 'اكتب سؤالك في شريط البحث للحصول على نصوص روحية ونصائح عملية',
+    'ask.empty.examples': 'أمثلة للأسئلة:',
+    'ask.empty.example1': '"كيف أجد السكينة في قلبي؟"',
+    'ask.empty.example2': '"ما الذكر المناسب عند الهم؟"',
+    'ask.empty.example3': '"كيف أثبت على الصلاة؟"',
+    'ask.practical.title': 'نصيحة عملية',
+    'ask.dua.title': 'دعاء مقترح',
+    'ask.warning': 'هذا السؤال يحتاج إلى استشارة أهل العلم المختصين للحصول على فتوى صحيحة.',
+    'ask.disclaimer': 'تنبيه مهم: هذه نصائح عامة وليست فتوى شرعية. للاستفسارات الفقهية يُرجى الرجوع إلى أهل العلم المختصين.',
   },
   en: {
     // Navigation
@@ -39,17 +54,32 @@ const translations = {
     'nav.profile': 'Profile',
     
     // Header
-    'header.title': 'Roohani',
+    'header.title': 'Rohani',
     'header.subtitle': 'A moment of peace... whenever your heart is tired',
     
     // Profile
     'profile.title': 'Profile',
-    'profile.welcome': 'Welcome to Roohani',
+    'profile.welcome': 'Welcome to Rohani',
     'profile.restart': 'Restart App',
     
     // Language switcher
     'language.current': 'English',
     'language.switch': 'العربية',
+    
+    // AskScripture
+    'ask.title': 'Scripture & Guidance',
+    'ask.subtitle': 'Ask and receive spiritual texts and practical advice',
+    'ask.placeholder': 'Type your question... like: How do I find inner peace?',
+    'ask.empty.title': 'Seek Guidance',
+    'ask.empty.description': 'Type your question in the search bar to receive spiritual texts and practical advice',
+    'ask.empty.examples': 'Example questions:',
+    'ask.empty.example1': '"How can I find peace in my heart?"',
+    'ask.empty.example2': '"What prayers help with anxiety?"',
+    'ask.empty.example3': '"How do I stay consistent with daily prayers?"',
+    'ask.practical.title': 'Practical Advice',
+    'ask.dua.title': 'Suggested Prayer',
+    'ask.warning': 'This question requires consultation with qualified religious scholars for proper guidance.',
+    'ask.disclaimer': 'Important Note: This is general advice and not religious ruling. For specific religious inquiries, please consult qualified scholars.',
   }
 };
 
