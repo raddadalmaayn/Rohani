@@ -85,6 +85,39 @@ export type Database = {
         }
         Relationships: []
       }
+      hadith: {
+        Row: {
+          created_at: string
+          embedding: string | null
+          has_dua: boolean | null
+          id: string
+          source_ref: string
+          text_ar: string
+          text_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          embedding?: string | null
+          has_dua?: boolean | null
+          id?: string
+          source_ref: string
+          text_ar: string
+          text_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          embedding?: string | null
+          has_dua?: boolean | null
+          id?: string
+          source_ref?: string
+          text_ar?: string
+          text_en?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       islamic_events: {
         Row: {
           created_at: string
@@ -229,6 +262,36 @@ export type Database = {
           user_id?: string
           username?: string | null
           website?: string | null
+        }
+        Relationships: []
+      }
+      quran: {
+        Row: {
+          created_at: string
+          embedding: string | null
+          id: string
+          source_ref: string
+          text_ar: string
+          text_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          source_ref: string
+          text_ar: string
+          text_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          source_ref?: string
+          text_ar?: string
+          text_en?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -500,6 +563,26 @@ export type Database = {
       l2_normalize: {
         Args: { "": string } | { "": unknown } | { "": unknown }
         Returns: unknown
+      }
+      match_hadith: {
+        Args: { embedding_input: string; match_count?: number }
+        Returns: {
+          id: string
+          source_ref: string
+          text_ar: string
+          text_en: string
+          similarity: number
+        }[]
+      }
+      match_quran: {
+        Args: { embedding_input: string; match_count?: number }
+        Returns: {
+          id: string
+          source_ref: string
+          text_ar: string
+          text_en: string
+          similarity: number
+        }[]
       }
       match_scripture: {
         Args:
