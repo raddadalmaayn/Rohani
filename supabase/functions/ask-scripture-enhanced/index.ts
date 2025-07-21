@@ -125,7 +125,11 @@ serve(async (req) => {
         ...ahadith.map(h => `${h.source_ref}: ${h.text_ar}`)
       ].join('\n');
 
-      const gptPrompt = lang === 'en' 
+      // Detect if query is in Arabic regardless of lang parameter
+      const isArabicQuery = /[\u0600-\u06FF]/.test(query);
+      const responseLanguage = isArabicQuery ? 'ar' : lang;
+      
+      const gptPrompt = responseLanguage === 'en' 
         ? `Based on these Islamic texts:\n${context}\n\nProvide practical spiritual advice for: "${query}"\n\nAlso suggest an appropriate dua (supplication).\n\nRespond in JSON format: {"practical_tip": "...", "dua": "..."}`
         : `بناءً على هذه النصوص الإسلامية:\n${context}\n\nقدم نصيحة روحية عملية لـ: "${query}"\n\nواقترح دعاءً مناسباً.\n\nالرد بصيغة JSON: {"practical_tip": "...", "dua": "..."}`;
 
@@ -142,9 +146,9 @@ serve(async (req) => {
             messages: [
               { 
                 role: 'system', 
-                content: lang === 'en' 
-                  ? 'You are a knowledgeable Islamic advisor. Provide practical spiritual guidance based on Quran and Hadith.'
-                  : 'أنت مستشار إسلامي مطلع. قدم إرشاداً روحياً عملياً مبنياً على القرآن والحديث.'
+                content: responseLanguage === 'en' 
+                  ? 'You are a knowledgeable Islamic advisor. Provide practical spiritual guidance based on Quran and Hadith in English.'
+                  : 'أنت مستشار إسلامي مطلع. قدم إرشاداً روحياً عملياً مبنياً على القرآن والحديث باللغة العربية.'
               },
               { role: 'user', content: gptPrompt }
             ],

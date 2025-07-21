@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { OnboardingFlow } from '@/components/OnboardingFlow';
-import { AskScripture } from '@/components/AskScripture';
+import { AskScriptureEnhanced } from '@/components/AskScriptureEnhanced';
 import { BookmarksView } from '@/components/BookmarksView';
 import { UserDashboard } from '@/components/UserDashboard';
 import { IslamicCalendarView } from '@/components/IslamicCalendarView';
@@ -46,7 +46,7 @@ const Index = () => {
     switch (currentView) {
       case 'scripture':
         return (
-          <AskScripture 
+          <AskScriptureEnhanced 
             language={userData.language}
             tradition={userData.tradition}
           />
