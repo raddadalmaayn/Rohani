@@ -42,6 +42,8 @@ const translations = {
     'ask.empty.example3': '"كيف أثبت على الصلاة؟"',
     'ask.practical.title': 'نصيحة عملية',
     'ask.dua.title': 'دعاء مقترح',
+    'ask.quran.title': 'آيات قرآنية',
+    'ask.hadith.title': 'أحاديث شريفة',
     'ask.warning': 'هذا السؤال يحتاج إلى استشارة أهل العلم المختصين للحصول على فتوى صحيحة.',
     'ask.disclaimer': 'تنبيه مهم: هذه نصائح عامة وليست فتوى شرعية. للاستفسارات الفقهية يُرجى الرجوع إلى أهل العلم المختصين.',
   },
@@ -78,6 +80,8 @@ const translations = {
     'ask.empty.example3': '"How do I stay consistent with daily prayers?"',
     'ask.practical.title': 'Practical Advice',
     'ask.dua.title': 'Suggested Prayer',
+    'ask.quran.title': 'Quran Verses',
+    'ask.hadith.title': 'Hadith',
     'ask.warning': 'This question requires consultation with qualified religious scholars for proper guidance.',
     'ask.disclaimer': 'Important Note: This is general advice and not religious ruling. For specific religious inquiries, please consult qualified scholars.',
   }
