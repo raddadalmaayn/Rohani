@@ -39,7 +39,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl!, supabaseKey!, {
       auth: { persistSession: false }
     });
-    const { query, user_id } = await req.json();
+    const { query, lang = 'ar', user_id } = await req.json();
 
     console.log('Processing query:', query);
     console.log('User ID:', user_id);
@@ -65,7 +65,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           input: query,
-          model: 'text-embedding-3-small'
+          model: 'text-embedding-ada-002'  // Use the more available model
         }),
       });
 
@@ -89,115 +89,139 @@ serve(async (req) => {
       queryEmbedding = null; // Will trigger fallback search
     }
 
-    // 2. Search for similar scriptures (with fallback)
+    // 2. Search for similar scriptures in both quran and hadith tables
     console.log('Searching for scriptures...');
-    let scriptures;
+    let quranResults = [];
+    let hadithResults = [];
     
     if (queryEmbedding) {
       console.log('Using semantic search with embeddings...');
-      console.log('Embedding length:', queryEmbedding.length);
-      console.log('First 5 values:', queryEmbedding.slice(0, 5));
       
-      // Use semantic search with embeddings
-      const vectorString = '[' + queryEmbedding.join(',') + ']';
-      console.log('Vector string format:', vectorString.substring(0, 100) + '...');
-      console.log('Vector string length:', vectorString.length);
-      
-      const { data, error: searchError } = await supabase
-        .rpc('match_scripture', {
-          embedding_input: vectorString,  // Changed parameter name to match function
-          match_count: 6
+      // Search Quran
+      const { data: quranData, error: quranError } = await supabase
+        .rpc('match_quran', {
+          embedding_input: queryEmbedding,
+          match_count: 3
         });
       
-      console.log('RPC call completed');
-      console.log('Search error:', searchError);
-      console.log('Search data type:', typeof data);
-      console.log('Search data length:', Array.isArray(data) ? data.length : 'not array');
-      console.log('Search data content:', JSON.stringify(data));
+      if (!quranError && quranData) {
+        quranResults = quranData;
+        console.log('Quran search returned:', quranResults.length, 'results');
+      }
       
-      if (searchError) {
-        console.error('Semantic search error:', searchError);
-        scriptures = null;
-      } else {
-        console.log('Semantic search returned:', data?.length || 0, 'results');
-        scriptures = data;
+      // Search Hadith  
+      const { data: hadithData, error: hadithError } = await supabase
+        .rpc('match_hadith', {
+          embedding_input: queryEmbedding,
+          match_count: 3
+        });
+      
+      if (!hadithError && hadithData) {
+        hadithResults = hadithData;
+        console.log('Hadith search returned:', hadithResults.length, 'results');
       }
     }
     
     // Fallback to text search if embedding search failed
-    if (!scriptures || scriptures.length === 0) {
+    if (quranResults.length === 0 && hadithResults.length === 0) {
       console.log('Using fallback text search...');
-      console.log('Search query:', query);
       
-      // First try direct search on the full query
-      const { data, error: textSearchError } = await supabase
-        .from('scripture')
-        .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+      // Search Quran table
+      const { data: quranFallback } = await supabase
+        .from('quran')
+        .select('id, source_ref, text_ar, text_en')
         .filter('text_ar', 'ilike', `%${query}%`)
-        .limit(6);
+        .limit(3);
         
-      console.log('Direct text search error:', textSearchError);
-      console.log('Direct text search results:', data?.length || 0);
+      if (quranFallback && quranFallback.length > 0) {
+        quranResults = quranFallback.map(item => ({ ...item, similarity: 0.8 }));
+      }
       
-      if (textSearchError) {
-        console.error('Text search error:', textSearchError);
-        scriptures = [];
-      } else if (data && data.length > 0) {
-        scriptures = data.map(item => ({ ...item, similarity: 0.8 }));
-        console.log('Direct text search successful:', scriptures.length, 'results');
-      } else {
-        // If no direct match, try searching for individual meaningful words
+      // Search Hadith table
+      const { data: hadithFallback } = await supabase
+        .from('hadith')
+        .select('id, source_ref, text_ar, text_en')
+        .filter('text_ar', 'ilike', `%${query}%`)
+        .limit(3);
+        
+      if (hadithFallback && hadithFallback.length > 0) {
+        hadithResults = hadithFallback.map(item => ({ ...item, similarity: 0.8 }));
+      }
+      
+      // If still no results, try word-based search
+      if (quranResults.length === 0 && hadithResults.length === 0) {
         const queryWords = query.trim().split(/\s+/).filter(word => word.length > 2);
         console.log('Extracted words for search:', queryWords);
         
-        for (const word of queryWords.slice(0, 3)) {
+        for (const word of queryWords.slice(0, 2)) {
           console.log('Searching for word:', word);
-          const { data: wordData } = await supabase
-            .from('scripture')
-            .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+          
+          // Search in Quran
+          const { data: quranWord } = await supabase
+            .from('quran')
+            .select('id, source_ref, text_ar, text_en')
             .filter('text_ar', 'ilike', `%${word}%`)
-            .limit(2);
+            .limit(1);
             
-          if (wordData && wordData.length > 0) {
-            console.log('Found results for word', word, ':', wordData.length);
-            if (!scriptures) scriptures = [];
-            scriptures.push(...wordData.map(item => ({ ...item, similarity: 0.6 })));
+          if (quranWord && quranWord.length > 0) {
+            quranResults.push(...quranWord.map(item => ({ ...item, similarity: 0.6 })));
+          }
+          
+          // Search in Hadith
+          const { data: hadithWord } = await supabase
+            .from('hadith')
+            .select('id, source_ref, text_ar, text_en')
+            .filter('text_ar', 'ilike', `%${word}%`)
+            .limit(1);
+            
+          if (hadithWord && hadithWord.length > 0) {
+            hadithResults.push(...hadithWord.map(item => ({ ...item, similarity: 0.6 })));
           }
         }
         
-        // Remove duplicates
-        if (scriptures && scriptures.length > 0) {
-          const uniqueResults = scriptures.filter((item, index, self) => 
-            index === self.findIndex(t => t.id === item.id)
-          );
-          scriptures = uniqueResults.slice(0, 6);
-          console.log('Word search completed:', scriptures.length, 'unique results');
-        } else {
+        // Last resort fallback
+        if (quranResults.length === 0 && hadithResults.length === 0) {
           console.log('No word matches found, trying fallback...');
-          // Last resort fallback
-          const { data: fallbackData } = await supabase
-            .from('scripture')
-            .select('id, source_ref, text_ar, text_type, chapter_name, verse_number')
+          
+          const { data: fallbackQuran } = await supabase
+            .from('quran')
+            .select('id, source_ref, text_ar, text_en')
             .filter('text_ar', 'ilike', '%الله%')
-            .limit(3);
+            .limit(2);
             
-          if (fallbackData && fallbackData.length > 0) {
-            console.log('Fallback search successful:', fallbackData.length);
-            scriptures = fallbackData.map(item => ({ ...item, similarity: 0.5 }));
+          const { data: fallbackHadith } = await supabase
+            .from('hadith')
+            .select('id, source_ref, text_ar, text_en')
+            .filter('text_ar', 'ilike', '%الله%')
+            .limit(1);
+            
+          if (fallbackQuran && fallbackQuran.length > 0) {
+            console.log('Fallback Quran search successful:', fallbackQuran.length);
+            quranResults = fallbackQuran.map(item => ({ ...item, similarity: 0.5 }));
+          }
+          
+          if (fallbackHadith && fallbackHadith.length > 0) {
+            console.log('Fallback Hadith search successful:', fallbackHadith.length);
+            hadithResults = fallbackHadith.map(item => ({ ...item, similarity: 0.5 }));
           }
         }
       }
     }
 
-    console.log('Final scriptures count:', scriptures?.length || 0);
+    console.log('Final results - Quran:', quranResults.length, 'Hadith:', hadithResults.length);
 
     // 3. If sensitive topic, return only scriptures without LLM advice
     if (isSensitiveTopic) {
-      console.log('Sensitive topic detected, returning scriptures only');
+      console.log('Sensitive topic detected, returning results only');
       return new Response(JSON.stringify({
-        scriptures: scriptures || [],
-        practical_tip: "هذا السؤال يحتاج إلى استشارة أهل العلم المختصين.",
-        dua: "اللهم أرشدنا إلى الحق وأعنا على اتباعه",
+        ayat: quranResults || [],
+        ahadith: hadithResults || [],
+        generic_tip: lang === 'en' 
+          ? "This question requires consultation with qualified religious scholars."
+          : "هذا السؤال يحتاج إلى استشارة أهل العلم المختصين.",
+        dua: lang === 'en'
+          ? "O Allah, guide us to the truth and help us follow it"
+          : "اللهم أرشدنا إلى الحق وأعنا على اتباعه",
         is_sensitive: true
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -205,24 +229,47 @@ serve(async (req) => {
     }
 
     // 4. Generate practical advice using GPT
-    if (!scriptures || scriptures.length === 0) {
-      console.log('No scriptures found for query');
+    if (quranResults.length === 0 && hadithResults.length === 0) {
+      console.log('No results found for query');
       return new Response(JSON.stringify({
-        scriptures: [],
-        practical_tip: "لم أجد نصوص مناسبة لسؤالك. جرب صياغة السؤال بطريقة أخرى.",
-        dua: "اللهم أرشدنا إلى ما فيه خير ديننا ودنيانا",
+        ayat: [],
+        ahadith: [],
+        generic_tip: lang === 'en' 
+          ? "I couldn't find suitable texts for your question. Try rephrasing it differently."
+          : "لم أجد نصوص مناسبة لسؤالك. جرب صياغة السؤال بطريقة أخرى.",
+        dua: lang === 'en'
+          ? "O Allah, guide us to what is best for our religion and worldly life"
+          : "اللهم أرشدنا إلى ما فيه خير ديننا ودنيانا",
         is_sensitive: false
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Create context from found scriptures
-    const context = scriptures
-      .map((v: ScriptureResult) => `${v.source_ref}: ${v.text_ar}`)
+    // Create context from found results
+    const allResults = [...quranResults, ...hadithResults];
+    const context = allResults
+      .map((v: any) => `${v.source_ref}: ${v.text_ar}`)
       .join('\n');
 
-    const systemMessage = `أنت مساعد روحي إسلامي متخصص. مهمتك تقديم نصائح عملية مفيدة وفريدة.
+    // Adjust system message based on language
+    const systemMessage = lang === 'en' 
+      ? `You are an Islamic spiritual assistant. Your task is to provide practical and useful advice.
+
+Important guidelines:
+1. For each question, provide a completely different and unique answer
+2. Read the attached texts carefully - if they are suitable for the question, use them. If not, ignore them and provide general advice
+3. Focus on practical advice applicable in daily life (100-150 words)
+4. Avoid repeating the same content in different answers
+5. Make each answer unique and tailored to the specific question
+6. Do not provide religious rulings or fatwas
+
+Response format JSON:
+{
+  "practical_tip": "Unique and useful practical advice...",
+  "dua": "Appropriate prayer starting with O Allah..."
+}`
+      : `أنت مساعد روحي إسلامي متخصص. مهمتك تقديم نصائح عملية مفيدة وفريدة.
 
 إرشادات مهمة:
 1. لكل سؤال، قدم إجابة مختلفة وفريدة تماماً
@@ -238,7 +285,14 @@ serve(async (req) => {
   "dua": "دعاء مناسب يبدأ بـ اللهم..."
 }`;
 
-    const userMessage = `السؤال: ${query}
+    const userMessage = lang === 'en'
+      ? `Question: ${query}
+
+Reference texts (use only if relevant to the question):
+${context}
+
+Provide unique and useful practical advice for the question, with an appropriate prayer.`
+      : `السؤال: ${query}
 
 النصوص المرجعية (استخدمها فقط إذا كانت مناسبة للسؤال):
 ${context}
@@ -303,7 +357,7 @@ ${context}
       console.error('GPT generation failed:', gptError);
       console.log('Using fallback advice...');
       // Fallback advice based on query content
-      llmAdvice = generateFallbackAdvice(query);
+      llmAdvice = generateFallbackAdvice(query, lang);
       console.log('Fallback advice generated:', llmAdvice);
     }
 
@@ -314,7 +368,7 @@ ${context}
           user_id,
           query,
           query_type: 'scripture_search',
-          results_count: scriptures.length
+          results_count: quranResults.length + hadithResults.length
         });
       } catch (analyticsError) {
         console.log('Analytics storage failed:', analyticsError);
@@ -327,9 +381,10 @@ ${context}
     console.log('Dua:', llmAdvice?.dua);
     
     const finalResponse = {
-      scriptures: scriptures || [],
-      practical_tip: llmAdvice?.practical_tip || "حدث خطأ في توليد النصيحة",
-      dua: llmAdvice?.dua || "اللهم أرشدنا إلى الحق",
+      ayat: quranResults || [],
+      ahadith: hadithResults || [],
+      generic_tip: llmAdvice?.practical_tip || (lang === 'en' ? "Error generating advice" : "حدث خطأ في توليد النصيحة"),
+      dua: llmAdvice?.dua || (lang === 'en' ? "O Allah, guide us to the truth" : "اللهم أرشدنا إلى الحق"),
       is_sensitive: false
     };
     
@@ -344,9 +399,10 @@ ${context}
     console.error('Error in ask-scripture function:', error?.stack || error);
     return new Response(JSON.stringify({ 
       error: error.message,
-      scriptures: [],
-      practical_tip: "حدث خطأ في النظام. حاول مرة أخرى.",
-      dua: "اللهم يسر لنا أمورنا"
+      ayat: [],
+      ahadith: [],
+      generic_tip: lang === 'en' ? "System error occurred. Please try again." : "حدث خطأ في النظام. حاول مرة أخرى.",
+      dua: lang === 'en' ? "O Allah, make our affairs easy for us" : "اللهم يسر لنا أمورنا"
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -355,9 +411,13 @@ ${context}
 });
 
 // Fallback advice generator when OpenAI is unavailable
-function generateFallbackAdvice(query: string): LLMResponse {
+function generateFallbackAdvice(query: string, lang: string = 'ar'): LLMResponse {
   return {
-    practical_tip: "عذراً، لا يمكنني معالجة طلبك حالياً. يرجى المحاولة مرة أخرى أو صياغة السؤال بطريقة أخرى.",
-    dua: "اللهم يسر لنا أمورنا واهدنا إلى ما فيه خير"
+    practical_tip: lang === 'en' 
+      ? "Sorry, I cannot process your request right now. Please try again or rephrase your question."
+      : "عذراً، لا يمكنني معالجة طلبك حالياً. يرجى المحاولة مرة أخرى أو صياغة السؤال بطريقة أخرى.",
+    dua: lang === 'en'
+      ? "O Allah, make our affairs easy for us and guide us to what is best"
+      : "اللهم يسر لنا أمورنا واهدنا إلى ما فيه خير"
   };
 }
