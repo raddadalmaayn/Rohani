@@ -52,7 +52,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               input: verse.text_ar,
-              model: 'text-embedding-3-small'
+              model: 'text-embedding-ada-002'  // Use the more available model
             }),
           });
 
@@ -114,7 +114,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               input: hadith.text_ar,
-              model: 'text-embedding-3-small'
+              model: 'text-embedding-ada-002'  // Use the more available model
             }),
           });
 
