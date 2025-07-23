@@ -94,9 +94,6 @@ serve(async (req) => {
     let quranResults = [];
     let hadithResults = [];
     
-    // Define similarity threshold for relevance (higher = more strict)
-    const SIMILARITY_THRESHOLD = 0.75;
-    
     if (queryEmbedding) {
       console.log('Using semantic search with embeddings...');
       
@@ -108,9 +105,8 @@ serve(async (req) => {
         });
       
       if (!quranError && quranData) {
-        // Filter by similarity threshold
-        quranResults = quranData.filter((item: any) => item.similarity >= SIMILARITY_THRESHOLD);
-        console.log('Quran search returned:', quranData.length, 'total,', quranResults.length, 'above threshold');
+        quranResults = quranData;
+        console.log('Quran search returned:', quranResults.length, 'results');
       }
       
       // Search Hadith  
@@ -121,36 +117,94 @@ serve(async (req) => {
         });
       
       if (!hadithError && hadithData) {
-        // Filter by similarity threshold
-        hadithResults = hadithData.filter((item: any) => item.similarity >= SIMILARITY_THRESHOLD);
-        console.log('Hadith search returned:', hadithData.length, 'total,', hadithResults.length, 'above threshold');
+        hadithResults = hadithData;
+        console.log('Hadith search returned:', hadithResults.length, 'results');
       }
     }
     
-    // Only try text search fallback if embedding search completely failed (no API call)
-    if (!queryEmbedding) {
+    // Fallback to text search if embedding search failed
+    if (quranResults.length === 0 && hadithResults.length === 0) {
       console.log('Using fallback text search...');
       
-      // Search Quran table for exact matches only
+      // Search Quran table
       const { data: quranFallback } = await supabase
         .from('quran')
         .select('id, source_ref, text_ar, text_en')
         .filter('text_ar', 'ilike', `%${query}%`)
-        .limit(2);
+        .limit(3);
         
       if (quranFallback && quranFallback.length > 0) {
-        quranResults = quranFallback.map(item => ({ ...item, similarity: 0.9 }));
+        quranResults = quranFallback.map(item => ({ ...item, similarity: 0.8 }));
       }
       
-      // Search Hadith table for exact matches only
+      // Search Hadith table
       const { data: hadithFallback } = await supabase
         .from('hadith')
         .select('id, source_ref, text_ar, text_en')
         .filter('text_ar', 'ilike', `%${query}%`)
-        .limit(2);
+        .limit(3);
         
       if (hadithFallback && hadithFallback.length > 0) {
-        hadithResults = hadithFallback.map(item => ({ ...item, similarity: 0.9 }));
+        hadithResults = hadithFallback.map(item => ({ ...item, similarity: 0.8 }));
+      }
+      
+      // If still no results, try word-based search
+      if (quranResults.length === 0 && hadithResults.length === 0) {
+        const queryWords = query.trim().split(/\s+/).filter(word => word.length > 2);
+        console.log('Extracted words for search:', queryWords);
+        
+        for (const word of queryWords.slice(0, 2)) {
+          console.log('Searching for word:', word);
+          
+          // Search in Quran
+          const { data: quranWord } = await supabase
+            .from('quran')
+            .select('id, source_ref, text_ar, text_en')
+            .filter('text_ar', 'ilike', `%${word}%`)
+            .limit(1);
+            
+          if (quranWord && quranWord.length > 0) {
+            quranResults.push(...quranWord.map(item => ({ ...item, similarity: 0.6 })));
+          }
+          
+          // Search in Hadith
+          const { data: hadithWord } = await supabase
+            .from('hadith')
+            .select('id, source_ref, text_ar, text_en')
+            .filter('text_ar', 'ilike', `%${word}%`)
+            .limit(1);
+            
+          if (hadithWord && hadithWord.length > 0) {
+            hadithResults.push(...hadithWord.map(item => ({ ...item, similarity: 0.6 })));
+          }
+        }
+        
+        // Last resort fallback
+        if (quranResults.length === 0 && hadithResults.length === 0) {
+          console.log('No word matches found, trying fallback...');
+          
+          const { data: fallbackQuran } = await supabase
+            .from('quran')
+            .select('id, source_ref, text_ar, text_en')
+            .filter('text_ar', 'ilike', '%الله%')
+            .limit(2);
+            
+          const { data: fallbackHadith } = await supabase
+            .from('hadith')
+            .select('id, source_ref, text_ar, text_en')
+            .filter('text_ar', 'ilike', '%الله%')
+            .limit(1);
+            
+          if (fallbackQuran && fallbackQuran.length > 0) {
+            console.log('Fallback Quran search successful:', fallbackQuran.length);
+            quranResults = fallbackQuran.map(item => ({ ...item, similarity: 0.5 }));
+          }
+          
+          if (fallbackHadith && fallbackHadith.length > 0) {
+            console.log('Fallback Hadith search successful:', fallbackHadith.length);
+            hadithResults = fallbackHadith.map(item => ({ ...item, similarity: 0.5 }));
+          }
+        }
       }
     }
 
