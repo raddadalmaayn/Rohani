@@ -329,13 +329,7 @@ ${context}
       if (!chatResponse.ok) {
         const errorText = await chatResponse.text();
         console.error('OpenAI Chat API error:', errorText);
-        
-        if (errorText.includes('insufficient_quota')) {
-          console.log('Quota exceeded, using fallback advice...');
-          throw new Error('quota_exceeded');
-        } else {
-          throw new Error(`OpenAI Chat API error: ${errorText}`);
-        }
+        throw new Error(`OpenAI Chat API error: ${errorText}`);
       }
 
       const chatData = await chatResponse.json();
@@ -355,10 +349,11 @@ ${context}
       }
     } catch (gptError) {
       console.error('GPT generation failed:', gptError);
-      console.log('Using fallback advice...');
-      // Fallback advice based on query content
-      llmAdvice = generateFallbackAdvice(query, lang);
-      console.log('Fallback advice generated:', llmAdvice);
+      console.log('Using intelligent fallback advice based on context...');
+      
+      // Generate contextual advice based on the search query and found texts
+      llmAdvice = generateContextualAdvice(query, allResults, lang);
+      console.log('Contextual advice generated:', llmAdvice);
     }
 
     // Store query for analytics (optional)
@@ -410,14 +405,62 @@ ${context}
   }
 });
 
-// Fallback advice generator when OpenAI is unavailable
-function generateFallbackAdvice(query: string, lang: string = 'ar'): LLMResponse {
+// Generate contextual advice based on query and found texts
+function generateContextualAdvice(query: string, results: any[], lang: string = 'ar'): LLMResponse {
+  const queryLower = query.toLowerCase();
+  
+  // Common Islamic topics and their advice
+  const contextualAdvice: { [key: string]: { ar: { tip: string, dua: string }, en: { tip: string, dua: string } } } = {
+    'ذكر|هم|حزن|غم': {
+      ar: {
+        tip: 'عند الهم والحزن، أكثر من ذكر الله تعالى. قل "لا إله إلا الله العظيم الحليم، لا إله إلا الله رب العرش العظيم". أيضاً أكثر من الاستغفار والصلاة على النبي صلى الله عليه وسلم. احرص على قراءة القرآن خاصة سورة الفاتحة والمعوذتين.',
+        dua: 'اللهم أذهب عني الهم والحزن والغم، وأبدلني بهما الفرح والسرور والسعادة'
+      },
+      en: {
+        tip: 'During times of worry and sadness, increase your remembrance of Allah. Say "La ilaha illa Allah al-Azeem al-Haleem, La ilaha illa Allah Rabb al-Arsh al-Azeem". Also increase istighfar and sending blessings upon the Prophet. Make sure to read Quran, especially Al-Fatiha and the protective surahs.',
+        dua: 'O Allah, remove from me worry, sadness and grief, and replace them with joy and happiness'
+      }
+    },
+    'صلاة|قيام|ثبات': {
+      ar: {
+        tip: 'للثبات على الصلاة، ابدأ بالفرائض أولاً وأتقنها. اضبط المنبه لأوقات الصلاة، وتوضأ مبكراً. ابحث عن مكان هادئ للصلاة، واقرأ دعاء الاستفتاح بخشوع. ذكر نفسك دائماً أن الصلاة هي الركن الثاني من أركان الإسلام.',
+        dua: 'اللهم أعني على ذكرك وشكرك وحسن عبادتك، واجعلني من المقيمين للصلاة'
+      },
+      en: {
+        tip: 'To be consistent with prayer, start with the obligatory prayers first and perfect them. Set alarms for prayer times, and make ablution early. Find a quiet place for prayer, and recite the opening supplication with humility. Always remind yourself that prayer is the second pillar of Islam.',
+        dua: 'O Allah, help me with Your remembrance, gratitude, and excellent worship, and make me among those who establish prayer'
+      }
+    },
+    'قرآن|تلاوة|حفظ': {
+      ar: {
+        tip: 'لتلاوة القرآن بانتظام، خصص وقتاً ثابتاً يومياً ولو لمدة 10 دقائق. ابدأ بالسور القصيرة واحفظها جيداً. استخدم تطبيقات القرآن للمتابعة. اقرأ بتدبر وفهم للمعاني، وليس فقط للحفظ.',
+        dua: 'اللهم اجعل القرآن ربيع قلبي ونور صدري وجلاء حزني وذهاب همي'
+      },
+      en: {
+        tip: 'To read Quran regularly, dedicate a fixed time daily, even if just 10 minutes. Start with short surahs and memorize them well. Use Quran apps for tracking. Read with contemplation and understanding of meanings, not just for memorization.',
+        dua: 'O Allah, make the Quran the spring of my heart, the light of my chest, the remover of my sadness and the dispeller of my worries'
+      }
+    }
+  };
+  
+  // Find matching advice based on query content
+  for (const [pattern, advice] of Object.entries(contextualAdvice)) {
+    const regex = new RegExp(pattern, 'i');
+    if (regex.test(query)) {
+      return {
+        practical_tip: advice[lang as keyof typeof advice].tip,
+        dua: advice[lang as keyof typeof advice].dua
+      };
+    }
+  }
+  
+  // Default advice if no specific match
   return {
     practical_tip: lang === 'en' 
-      ? "Sorry, I cannot process your request right now. Please try again or rephrase your question."
-      : "عذراً، لا يمكنني معالجة طلبك حالياً. يرجى المحاولة مرة أخرى أو صياغة السؤال بطريقة أخرى.",
+      ? "Remember that Allah is always with you in times of difficulty. Turn to Him through prayer, remembrance, and reading the Quran. Be patient and trust in His wisdom, for He knows what is best for you."
+      : "تذكر أن الله معك دائماً في أوقات الصعوبة. توجه إليه بالدعاء والذكر وقراءة القرآن. اصبر وتوكل عليه، فهو يعلم ما هو خير لك.",
     dua: lang === 'en'
-      ? "O Allah, make our affairs easy for us and guide us to what is best"
-      : "اللهم يسر لنا أمورنا واهدنا إلى ما فيه خير"
+      ? "O Allah, grant me patience and make my affairs easy for me"
+      : "اللهم اصبرني واجعل لي من أمري يسراً"
   };
 }
