@@ -101,7 +101,7 @@ serve(async (req) => {
       const { data: quranData, error: quranError } = await supabase
         .rpc('match_quran', {
           embedding_input: queryEmbedding,
-          match_count: 3
+          match_count: 5
         });
       
       if (!quranError && quranData) {
@@ -113,7 +113,7 @@ serve(async (req) => {
       const { data: hadithData, error: hadithError } = await supabase
         .rpc('match_hadith', {
           embedding_input: queryEmbedding,
-          match_count: 3
+          match_count: 5
         });
       
       if (!hadithError && hadithData) {
@@ -122,89 +122,56 @@ serve(async (req) => {
       }
     }
     
-    // Fallback to text search if embedding search failed
-    if (quranResults.length === 0 && hadithResults.length === 0) {
-      console.log('Using fallback text search...');
+    // Apply similarity threshold filtering
+    const MIN_SIM = 0.72;
+    quranResults = (quranResults || []).filter(r => r.similarity >= MIN_SIM);
+    hadithResults = (hadithResults || []).filter(r => r.similarity >= MIN_SIM);
+    
+    console.log('After filtering:', quranResults.length, 'Quran,', hadithResults.length, 'Hadith');
+    
+    // Randomize equally-ranked hadith to avoid repetition
+    if (hadithResults.length > 1) {
+      // Group by similar similarity scores (difference < 0.01)
+      const similarityGroups = new Map();
+      hadithResults.forEach(hadith => {
+        const similarityKey = Math.round(hadith.similarity * 100);
+        if (!similarityGroups.has(similarityKey)) {
+          similarityGroups.set(similarityKey, []);
+        }
+        similarityGroups.get(similarityKey).push(hadith);
+      });
       
-      // Search Quran table
+      // Shuffle within each group
+      for (const group of similarityGroups.values()) {
+        if (group.length > 1) {
+          for (let i = group.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [group[i], group[j]] = [group[j], group[i]];
+          }
+        }
+      }
+      
+      // Rebuild hadith results maintaining similarity order
+      hadithResults = Array.from(similarityGroups.entries())
+        .sort(([a], [b]) => b - a)
+        .flatMap(([, group]) => group)
+        .slice(0, 3);
+    }
+    
+    // Light fallback for Quran only if absolutely no results at all
+    if (quranResults.length === 0 && hadithResults.length === 0) {
+      console.log('No semantic matches found, trying text search fallback...');
+      
+      // Only search Quran with direct text match
       const { data: quranFallback } = await supabase
         .from('quran')
         .select('id, source_ref, text_ar, text_en')
         .filter('text_ar', 'ilike', `%${query}%`)
-        .limit(3);
+        .limit(2);
         
       if (quranFallback && quranFallback.length > 0) {
-        quranResults = quranFallback.map(item => ({ ...item, similarity: 0.8 }));
-      }
-      
-      // Search Hadith table
-      const { data: hadithFallback } = await supabase
-        .from('hadith')
-        .select('id, source_ref, text_ar, text_en')
-        .filter('text_ar', 'ilike', `%${query}%`)
-        .limit(3);
-        
-      if (hadithFallback && hadithFallback.length > 0) {
-        hadithResults = hadithFallback.map(item => ({ ...item, similarity: 0.8 }));
-      }
-      
-      // If still no results, try word-based search
-      if (quranResults.length === 0 && hadithResults.length === 0) {
-        const queryWords = query.trim().split(/\s+/).filter(word => word.length > 2);
-        console.log('Extracted words for search:', queryWords);
-        
-        for (const word of queryWords.slice(0, 2)) {
-          console.log('Searching for word:', word);
-          
-          // Search in Quran
-          const { data: quranWord } = await supabase
-            .from('quran')
-            .select('id, source_ref, text_ar, text_en')
-            .filter('text_ar', 'ilike', `%${word}%`)
-            .limit(1);
-            
-          if (quranWord && quranWord.length > 0) {
-            quranResults.push(...quranWord.map(item => ({ ...item, similarity: 0.6 })));
-          }
-          
-          // Search in Hadith
-          const { data: hadithWord } = await supabase
-            .from('hadith')
-            .select('id, source_ref, text_ar, text_en')
-            .filter('text_ar', 'ilike', `%${word}%`)
-            .limit(1);
-            
-          if (hadithWord && hadithWord.length > 0) {
-            hadithResults.push(...hadithWord.map(item => ({ ...item, similarity: 0.6 })));
-          }
-        }
-        
-        // Last resort fallback
-        if (quranResults.length === 0 && hadithResults.length === 0) {
-          console.log('No word matches found, trying fallback...');
-          
-          const { data: fallbackQuran } = await supabase
-            .from('quran')
-            .select('id, source_ref, text_ar, text_en')
-            .filter('text_ar', 'ilike', '%الله%')
-            .limit(2);
-            
-          const { data: fallbackHadith } = await supabase
-            .from('hadith')
-            .select('id, source_ref, text_ar, text_en')
-            .filter('text_ar', 'ilike', '%الله%')
-            .limit(1);
-            
-          if (fallbackQuran && fallbackQuran.length > 0) {
-            console.log('Fallback Quran search successful:', fallbackQuran.length);
-            quranResults = fallbackQuran.map(item => ({ ...item, similarity: 0.5 }));
-          }
-          
-          if (fallbackHadith && fallbackHadith.length > 0) {
-            console.log('Fallback Hadith search successful:', fallbackHadith.length);
-            hadithResults = fallbackHadith.map(item => ({ ...item, similarity: 0.5 }));
-          }
-        }
+        quranResults = quranFallback.map(item => ({ ...item, similarity: 0.0 })); // Mark as fallback
+        console.log('Fallback Quran search found:', quranResults.length, 'results');
       }
     }
 

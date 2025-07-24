@@ -228,8 +228,8 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
               </Card>
             )}
 
-            {/* 1. Quran Verses */}
-            {!isSensitive && ayat.length > 0 && (
+            {/* 1. Quran Verses - Only show if there are results */}
+            {ayat.length > 0 && (
               <div className="space-y-4">
                 <h2 className={`text-xl font-semibold flex items-center gap-2 ${isAR ? 'font-arabic' : ''}`}>
                   🌿 {isAR ? 'آيات قرآنية' : 'Quran Verses'}
@@ -256,8 +256,8 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
               </div>
             )}
 
-            {/* 2. Hadith */}
-            {!isSensitive && ahadith.length > 0 && (
+            {/* 2. Hadith - Only show if there are results */}
+            {ahadith.length > 0 && (
               <div className="space-y-4">
                 <h2 className={`text-xl font-semibold flex items-center gap-2 ${isAR ? 'font-arabic' : ''}`}>
                   📜 {isAR ? 'أحاديث شريفة' : 'Hadith'}
