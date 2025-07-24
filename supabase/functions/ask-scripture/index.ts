@@ -195,23 +195,8 @@ serve(async (req) => {
       });
     }
 
-    // 4. Generate practical advice using GPT
-    if (quranResults.length === 0 && hadithResults.length === 0) {
-      console.log('No results found for query');
-      return new Response(JSON.stringify({
-        ayat: [],
-        ahadith: [],
-        generic_tip: lang === 'en' 
-          ? "I couldn't find suitable texts for your question. Try rephrasing it differently."
-          : "لم أجد نصوص مناسبة لسؤالك. جرب صياغة السؤال بطريقة أخرى.",
-        dua: lang === 'en'
-          ? "O Allah, guide us to what is best for our religion and worldly life"
-          : "اللهم أرشدنا إلى ما فيه خير ديننا ودنيانا",
-        is_sensitive: false
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Continue to GPT generation even if no scriptures found
+    console.log('Proceeding to GPT generation with context...');
 
     // Create context from found results
     const allResults = [...quranResults, ...hadithResults];
@@ -353,7 +338,13 @@ ${context}
     console.log('Final response being sent:', JSON.stringify(finalResponse, null, 2));
     console.log('Response timestamp:', new Date().toISOString());
     
-    return new Response(JSON.stringify(finalResponse), {
+    // Add notice if no scriptures were found but still provide advice
+    const responseWithNotice = {
+      ...finalResponse,
+      no_scripture_notice: (quranResults.length === 0 && hadithResults.length === 0)
+    };
+    
+    return new Response(JSON.stringify(responseWithNotice), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

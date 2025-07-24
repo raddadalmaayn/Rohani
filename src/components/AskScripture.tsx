@@ -32,6 +32,7 @@ interface LLMResponse {
   generic_tip: string;
   dua: string;
   is_sensitive: boolean;
+  no_scripture_notice?: boolean;
 }
 
 interface AskScriptureProps {
@@ -47,6 +48,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
   const [practicalTip, setPracticalTip] = useState<string>('');
   const [dua, setDua] = useState<string>('');
   const [isSensitive, setIsSensitive] = useState(false);
+  const [noScriptureNotice, setNoScriptureNotice] = useState(false);
   const { toast } = useToast();
   const { saveSearch } = useSearchHistory();
   const { updateProgress } = useUserProgress();
@@ -58,9 +60,10 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
     setIsSearching(true);
     setAyat([]);
     setAhadith([]);
-    setPracticalTip('');
-    setDua('');
-    setIsSensitive(false);
+      setPracticalTip('');
+      setDua('');
+      setIsSensitive(false);
+      setNoScriptureNotice(false);
     
     try {
       console.log('Calling ask-scripture function with query:', query);
@@ -126,6 +129,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
               setPracticalTip(retryData.generic_tip || '');
               setDua(retryData.dua || '');
               setIsSensitive(retryData.is_sensitive || false);
+              setNoScriptureNotice(retryData.no_scripture_notice || false);
               
               toast({
                 title: currentLanguage === 'ar' ? 'تم العثور على نتائج' : 'Results Found',
@@ -152,6 +156,7 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
       setPracticalTip(response.generic_tip || '');
       setDua(response.dua || '');
       setIsSensitive(response.is_sensitive || false);
+      setNoScriptureNotice(response.no_scripture_notice || false);
 
       // Save search to history and update progress
       await saveSearch(query.trim(), (response.ayat?.length || 0) + (response.ahadith?.length || 0));
@@ -206,6 +211,17 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
           onQueryChange={setQuery}
           isSearching={isSearching}
         />
+
+        {/* No Scripture Notice */}
+        {noScriptureNotice && !isSearching && (
+          <div className="mb-4">
+            <p className={`text-sm text-muted-foreground text-center ${isAR ? 'font-arabic' : ''}`}>
+              {isAR 
+                ? 'لم أجد نصوص مناسبة للسؤال، لكن إليك نصيحة عملية مفيدة:'
+                : 'No specific scriptures found for your question, but here is practical advice:'}
+            </p>
+          </div>
+        )}
 
 
         {/* Loading State */}
