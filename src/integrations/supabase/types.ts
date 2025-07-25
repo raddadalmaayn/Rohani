@@ -442,6 +442,7 @@ export type Database = {
           list_of_words: string | null
           manzil_no: number | null
           no_of_word_ayah: number | null
+          normalized_en: string | null
           normalized_text: string | null
           place_of_revelation: string | null
           ruko_no: number | null
@@ -465,6 +466,7 @@ export type Database = {
           list_of_words?: string | null
           manzil_no?: number | null
           no_of_word_ayah?: number | null
+          normalized_en?: string | null
           normalized_text?: string | null
           place_of_revelation?: string | null
           ruko_no?: number | null
@@ -488,6 +490,7 @@ export type Database = {
           list_of_words?: string | null
           manzil_no?: number | null
           no_of_word_ayah?: number | null
+          normalized_en?: string | null
           normalized_text?: string | null
           place_of_revelation?: string | null
           ruko_no?: number | null
@@ -650,7 +653,12 @@ export type Database = {
         Returns: string
       }
       search_verses_local: {
-        Args: { q: string; q_embedding?: string; limit_n?: number }
+        Args: {
+          q: string
+          lang?: string
+          q_embedding?: string
+          limit_n?: number
+        }
         Returns: {
           id: number
           surah_id: number
