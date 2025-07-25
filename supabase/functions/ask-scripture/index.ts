@@ -89,7 +89,7 @@ serve(async (req) => {
       queryEmbedding = null; // Will trigger fallback search
     }
 
-    // 2. Search for similar scriptures in both quran and hadith tables
+    // 2. Search for similar scriptures using local verses table and hadith table
     console.log('Searching for scriptures...');
     let quranResults = [];
     let hadithResults = [];
@@ -97,16 +97,33 @@ serve(async (req) => {
     if (queryEmbedding) {
       console.log('Using semantic search with embeddings...');
       
-      // Search Quran
-      const { data: quranData, error: quranError } = await supabase
-        .rpc('match_quran', {
-          embedding_input: queryEmbedding,
-          match_count: 5
+      // Search local verses using new RPC function
+      const { data: versesData, error: versesError } = await supabase
+        .rpc('search_verses_local', {
+          q: query,
+          q_embedding: `[${queryEmbedding.join(',')}]`,
+          limit_n: 6
         });
-      
-      if (!quranError && quranData) {
-        quranResults = quranData;
-        console.log('Quran search returned:', quranResults.length, 'results');
+
+      if (!versesError && versesData) {
+        console.log('Verses search returned:', versesData.length, 'results');
+        
+        // Apply score threshold for verses (0.55 for local search)
+        const MIN_VERSE_SCORE = 0.55;
+        const filteredVerses = versesData.filter(r => r.score >= MIN_VERSE_SCORE);
+        
+        // Convert to expected format
+        quranResults = filteredVerses.map(v => ({
+          id: v.id.toString(),
+          source_ref: `${v.surah_name_ar} ${v.ayah_number}`,
+          text_ar: v.text_ar,
+          text_en: v.text_en,
+          similarity: v.score
+        }));
+        
+        console.log('verses found:', quranResults.length);
+      } else {
+        console.error('Verses search error:', versesError);
       }
       
       // Search Hadith  
@@ -122,12 +139,11 @@ serve(async (req) => {
       }
     }
     
-    // Apply similarity threshold filtering
+    // Apply similarity threshold filtering for hadith
     const MIN_SIM = 0.72;
-    quranResults = (quranResults || []).filter(r => r.similarity >= MIN_SIM);
     hadithResults = (hadithResults || []).filter(r => r.similarity >= MIN_SIM);
     
-    console.log('After filtering:', quranResults.length, 'Quran,', hadithResults.length, 'Hadith');
+    console.log('After filtering - Quran:', quranResults.length, 'Hadith:', hadithResults.length);
     
     // Randomize equally-ranked hadith to avoid repetition
     if (hadithResults.length > 1) {
@@ -158,20 +174,28 @@ serve(async (req) => {
         .slice(0, 3);
     }
     
-    // Light fallback for Quran only if absolutely no results at all
+    // Light fallback for verses only if absolutely no results at all
     if (quranResults.length === 0 && hadithResults.length === 0) {
       console.log('No semantic matches found, trying text search fallback...');
       
-      // Only search Quran with direct text match
-      const { data: quranFallback } = await supabase
-        .from('quran')
-        .select('id, source_ref, text_ar, text_en')
-        .filter('text_ar', 'ilike', `%${query}%`)
-        .limit(2);
+      // Try local verses search without embedding (text-only fallback)
+      const { data: versesFallback, error: fallbackError } = await supabase
+        .rpc('search_verses_local', {
+          q: query,
+          q_embedding: null,
+          limit_n: 3
+        });
         
-      if (quranFallback && quranFallback.length > 0) {
-        quranResults = quranFallback.map(item => ({ ...item, similarity: 0.0 })); // Mark as fallback
-        console.log('Fallback Quran search found:', quranResults.length, 'results');
+      if (!fallbackError && versesFallback && versesFallback.length > 0) {
+        // Convert to expected format with low similarity score
+        quranResults = versesFallback.map(v => ({
+          id: v.id.toString(),
+          source_ref: `${v.surah_name_ar} ${v.ayah_number}`,
+          text_ar: v.text_ar,
+          text_en: v.text_en,
+          similarity: v.score * 0.5 // Mark as fallback with lower score
+        }));
+        console.log('Fallback verses search found:', quranResults.length, 'results');
       }
     }
 

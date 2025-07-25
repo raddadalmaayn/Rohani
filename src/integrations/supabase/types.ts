@@ -436,11 +436,13 @@ export type Database = {
           ayah_en: string | null
           ayah_no_quran: number | null
           ayah_no_surah: number | null
+          embedding: string | null
           hizb_quarter: number | null
           juz_no: number | null
           list_of_words: string | null
           manzil_no: number | null
           no_of_word_ayah: number | null
+          normalized_text: string | null
           place_of_revelation: string | null
           ruko_no: number | null
           sajah_ayah: boolean | null
@@ -457,11 +459,13 @@ export type Database = {
           ayah_en?: string | null
           ayah_no_quran?: number | null
           ayah_no_surah?: number | null
+          embedding?: string | null
           hizb_quarter?: number | null
           juz_no?: number | null
           list_of_words?: string | null
           manzil_no?: number | null
           no_of_word_ayah?: number | null
+          normalized_text?: string | null
           place_of_revelation?: string | null
           ruko_no?: number | null
           sajah_ayah?: boolean | null
@@ -478,11 +482,13 @@ export type Database = {
           ayah_en?: string | null
           ayah_no_quran?: number | null
           ayah_no_surah?: number | null
+          embedding?: string | null
           hizb_quarter?: number | null
           juz_no?: number | null
           list_of_words?: string | null
           manzil_no?: number | null
           no_of_word_ayah?: number | null
+          normalized_text?: string | null
           place_of_revelation?: string | null
           ruko_no?: number | null
           sajah_ayah?: boolean | null
@@ -511,6 +517,26 @@ export type Database = {
           query: string
           frequency: number
         }[]
+      }
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
       }
       halfvec_avg: {
         Args: { "": number[] }
@@ -618,6 +644,35 @@ export type Database = {
           surah_name_en: string
           similarity: number
         }[]
+      }
+      normalize_arabic: {
+        Args: { input_text: string }
+        Returns: string
+      }
+      search_verses_local: {
+        Args: { q: string; q_embedding?: string; limit_n?: number }
+        Returns: {
+          id: number
+          surah_id: number
+          ayah_number: number
+          text_ar: string
+          text_en: string
+          surah_name_ar: string
+          surah_name_en: string
+          score: number
+        }[]
+      }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
       }
       sparsevec_out: {
         Args: { "": unknown }
