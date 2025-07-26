@@ -97,10 +97,11 @@ serve(async (req) => {
     if (queryEmbedding) {
       console.log('Using semantic search with embeddings...');
       
-      // Search local verses using new RPC function
+      // Search local verses using new RPC function with language support
       const { data: versesData, error: versesError } = await supabase
         .rpc('search_verses_local', {
           q: query,
+          lang: lang,
           q_embedding: `[${queryEmbedding.join(',')}]`,
           limit_n: 6
         });
@@ -182,6 +183,7 @@ serve(async (req) => {
       const { data: versesFallback, error: fallbackError } = await supabase
         .rpc('search_verses_local', {
           q: query,
+          lang: lang,
           q_embedding: null,
           limit_n: 3
         });
