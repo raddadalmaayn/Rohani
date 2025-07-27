@@ -5,6 +5,7 @@ import { Bookmark, BookmarkCheck, Heart, Share2, Trash2 } from 'lucide-react';
 import { useBookmarks } from '@/hooks/use-bookmarks';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { VerseFeedback } from './VerseFeedback';
 
 interface ScriptureCardProps {
   scripture: {
@@ -19,13 +20,15 @@ interface ScriptureCardProps {
   showBookmarkButton?: boolean;
   isBookmarkView?: boolean;
   onRemoveFromBookmarks?: (id: string) => void;
+  query?: string; // For feedback tracking
 }
 
 export function ScriptureCard({ 
   scripture, 
   showBookmarkButton = true, 
   isBookmarkView = false,
-  onRemoveFromBookmarks 
+  onRemoveFromBookmarks,
+  query 
 }: ScriptureCardProps) {
   const { addBookmark, removeBookmark, isBookmarked } = useBookmarks();
   const [bookmarkStatus, setBookmarkStatus] = useState<boolean | null>(null);
@@ -162,12 +165,21 @@ export function ScriptureCard({
           </p>
           
           <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-3">
-            <span className="font-medium">{scripture.source_ref}</span>
-            {scripture.chapter_name && (
-              <span>{scripture.chapter_name}</span>
-            )}
-            {scripture.verse_number && (
-              <span>الآية {scripture.verse_number}</span>
+            <div className="flex items-center gap-4">
+              <span className="font-medium">{scripture.source_ref}</span>
+              {scripture.chapter_name && (
+                <span>{scripture.chapter_name}</span>
+              )}
+              {scripture.verse_number && (
+                <span>الآية {scripture.verse_number}</span>
+              )}
+            </div>
+            {query && (
+              <VerseFeedback 
+                verseRef={scripture.source_ref} 
+                query={query}
+                className="mr-auto"
+              />
             )}
           </div>
         </div>

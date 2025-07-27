@@ -10,6 +10,7 @@ import { SearchWithHistory } from '@/components/SearchWithHistory';
 import { useSearchHistory } from '@/hooks/use-search-history';
 import { useUserProgress } from '@/hooks/use-user-progress';
 import { useLanguage } from '@/hooks/use-language';
+import { VerseFeedback } from './VerseFeedback';
 
 interface QuranVerse {
   id: string;
@@ -138,6 +139,12 @@ export function AskScriptureEnhanced({ language, tradition }: AskScriptureEnhanc
                   {item.text_ar}
                 </p>
               )}
+              <div className="flex justify-end mt-2">
+                <VerseFeedback 
+                  verseRef={item.source_ref} 
+                  query={query}
+                />
+              </div>
             </div>
           ))}
         </CardContent>

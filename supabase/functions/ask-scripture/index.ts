@@ -89,32 +89,42 @@ serve(async (req) => {
       queryEmbedding = null; // Will trigger fallback search
     }
 
-    // 2. Search for similar scriptures using local verses table and hadith table
+    // 2. Search for similar scriptures using enhanced search with synonyms
     console.log('Searching for scriptures...');
     let quranResults = [];
     let hadithResults = [];
     
+    // First, expand query with synonyms for better matching
+    const { data: expandedQuery } = await supabase
+      .rpc('expand_query_with_synonyms', { 
+        input_query: query, 
+        input_lang: lang 
+      });
+    
+    const searchQuery = expandedQuery || query;
+    console.log(`Original query: "${query}", Expanded: "${searchQuery}"`);
+    
     if (queryEmbedding) {
       console.log('Using semantic search with embeddings...');
       
-      // Search local verses using new RPC function with language support
+      // Search local verses using expanded query - limit to 10 for potential re-ranking
       const { data: versesData, error: versesError } = await supabase
         .rpc('search_verses_local', {
-          q: query,
+          q: searchQuery,
           lang: lang,
           q_embedding: `[${queryEmbedding.join(',')}]`,
-          limit_n: 6
+          limit_n: 10
         });
 
       if (!versesError && versesData) {
         console.log('Verses search returned:', versesData.length, 'results');
         
-        // Apply score threshold for verses (0.55 for local search)
-        const MIN_VERSE_SCORE = 0.55;
+        // Apply stricter threshold and limit to top 3 for better relevance
+        const MIN_VERSE_SCORE = 0.6;
         const filteredVerses = versesData.filter(r => r.score >= MIN_VERSE_SCORE);
         
-        // Convert to expected format
-        quranResults = filteredVerses.map(v => ({
+        // Convert to expected format and limit to 3 best matches
+        quranResults = filteredVerses.slice(0, 3).map(v => ({
           id: v.id.toString(),
           source_ref: `${v.surah_name_ar} ${v.ayah_number}`,
           text_ar: v.text_ar,
@@ -179,10 +189,10 @@ serve(async (req) => {
     if (quranResults.length === 0 && hadithResults.length === 0) {
       console.log('No semantic matches found, trying text search fallback...');
       
-      // Try local verses search without embedding (text-only fallback)
+      // Try local verses search without embedding (text-only fallback) using expanded query
       const { data: versesFallback, error: fallbackError } = await supabase
         .rpc('search_verses_local', {
-          q: query,
+          q: searchQuery,
           lang: lang,
           q_embedding: null,
           limit_n: 3

@@ -160,6 +160,27 @@ export type Database = {
         }
         Relationships: []
       }
+      keywords_map: {
+        Row: {
+          created_at: string
+          keyword: string
+          synonyms: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          keyword: string
+          synonyms: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          keyword?: string
+          synonyms?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -430,6 +451,33 @@ export type Database = {
         }
         Relationships: []
       }
+      verse_feedback: {
+        Row: {
+          created_at: string
+          id: string
+          is_helpful: boolean
+          query: string
+          user_id: string
+          verse_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_helpful: boolean
+          query: string
+          user_id: string
+          verse_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_helpful?: boolean
+          query?: string
+          user_id?: string
+          verse_id?: string
+        }
+        Relationships: []
+      }
       verses: {
         Row: {
           ayah_ar: string | null
@@ -513,6 +561,10 @@ export type Database = {
       binary_quantize: {
         Args: { "": string } | { "": unknown }
         Returns: unknown
+      }
+      expand_query_with_synonyms: {
+        Args: { input_query: string; input_lang?: string }
+        Returns: string
       }
       get_search_suggestions: {
         Args: { search_term?: string; limit_count?: number }
