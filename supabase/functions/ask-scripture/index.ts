@@ -27,6 +27,16 @@ interface LLMResponse {
   dua: string;
 }
 
+interface VerseScore {
+  id: string;
+  score: number;
+  reason: string;
+}
+
+interface LLMRerankResponse {
+  scores: VerseScore[];
+}
+
 serve(async (req) => {
   console.log('Ask Scripture function called');
 
@@ -107,32 +117,43 @@ serve(async (req) => {
     if (queryEmbedding) {
       console.log('Using semantic search with embeddings...');
       
-      // Search local verses using expanded query - limit to 10 for potential re-ranking
+      // Search local verses using expanded query - limit to 12 for LLM re-ranking
       const { data: versesData, error: versesError } = await supabase
         .rpc('search_verses_local', {
           q: searchQuery,
           lang: lang,
           q_embedding: `[${queryEmbedding.join(',')}]`,
-          limit_n: 10
+          limit_n: 12
         });
 
       if (!versesError && versesData) {
-        console.log('Verses search returned:', versesData.length, 'results');
+        console.log('raw:', versesData.length);
         
-        // Apply stricter threshold and limit to top 3 for better relevance
-        const MIN_VERSE_SCORE = 0.6;
-        const filteredVerses = versesData.filter(r => r.score >= MIN_VERSE_SCORE);
-        
-        // Convert to expected format and limit to 3 best matches
-        quranResults = filteredVerses.slice(0, 3).map(v => ({
+        // Convert to expected format first
+        const rawVerses = versesData.map(v => ({
           id: v.id.toString(),
           source_ref: `${v.surah_name_ar} ${v.ayah_number}`,
           text_ar: v.text_ar,
           text_en: v.text_en,
           similarity: v.score
         }));
-        
-        console.log('verses found:', quranResults.length);
+
+        // Apply LLM re-ranking if we have verses
+        if (rawVerses.length > 0) {
+          try {
+            const rerankedVerses = await rerankVersesWithLLM(query, rawVerses, lang);
+            quranResults = rerankedVerses;
+            console.log('afterLLM:', quranResults.length);
+          } catch (llmError) {
+            console.error('LLM re-ranking failed, using fallback:', llmError);
+            // Fallback: use local score threshold
+            const MIN_VERSE_SCORE = 0.65;
+            quranResults = rawVerses.filter(r => r.similarity >= MIN_VERSE_SCORE).slice(0, 3);
+            console.log('afterLLM (fallback):', quranResults.length);
+          }
+        } else {
+          quranResults = [];
+        }
       } else {
         console.error('Verses search error:', versesError);
       }
@@ -195,19 +216,29 @@ serve(async (req) => {
           q: searchQuery,
           lang: lang,
           q_embedding: null,
-          limit_n: 3
+          limit_n: 12
         });
         
       if (!fallbackError && versesFallback && versesFallback.length > 0) {
-        // Convert to expected format with low similarity score
-        quranResults = versesFallback.map(v => ({
+        // Convert to expected format
+        const rawFallbackVerses = versesFallback.map(v => ({
           id: v.id.toString(),
           source_ref: `${v.surah_name_ar} ${v.ayah_number}`,
           text_ar: v.text_ar,
           text_en: v.text_en,
           similarity: v.score * 0.5 // Mark as fallback with lower score
         }));
-        console.log('Fallback verses search found:', quranResults.length, 'results');
+
+        // Try LLM re-ranking even for fallback
+        try {
+          const rerankedFallback = await rerankVersesWithLLM(query, rawFallbackVerses, lang);
+          quranResults = rerankedFallback;
+          console.log('Fallback with LLM re-ranking found:', quranResults.length, 'results');
+        } catch (llmError) {
+          console.error('LLM re-ranking failed for fallback, using basic filtering:', llmError);
+          quranResults = rawFallbackVerses.slice(0, 3);
+          console.log('Fallback verses search found:', quranResults.length, 'results');
+        }
       }
     }
 
@@ -457,4 +488,114 @@ function generateContextualAdvice(query: string, results: any[], lang: string = 
       ? "O Allah, grant me patience and make my affairs easy for me"
       : "اللهم اصبرني واجعل لي من أمري يسراً"
   };
+}
+
+// LLM re-ranking function for verses
+async function rerankVersesWithLLM(query: string, verses: any[], lang: string): Promise<any[]> {
+  if (verses.length === 0) {
+    return [];
+  }
+
+  // Prepare verses for LLM with text truncation (cost guard)
+  const versesForLLM = verses.map(v => ({
+    id: v.id,
+    text_ar: v.text_ar.length > 260 ? v.text_ar.substring(0, 260) + '...' : v.text_ar,
+    text_en: v.text_en && v.text_en.length > 260 ? v.text_en.substring(0, 260) + '...' : v.text_en,
+    source_ref: v.source_ref
+  }));
+
+  const systemMessage = lang === 'en' 
+    ? `You are a relevance scorer for Islamic verses. Given a user query and verses, score each verse from 0 to 1 based on how well it answers or relates to the specific question. Be strict - only high relevance (0.75+) verses should get high scores.
+
+Return JSON only:
+{"scores":[{"id":"verse_id","score":0.85,"reason":"short reason"}]}`
+    : `أنت مقيم صلة الآيات القرآنية. بناء على سؤال المستخدم والآيات المعطاة، قيم كل آية من 0 إلى 1 حسب مدى إجابتها أو صلتها بالسؤال المحدد. كن صارماً - فقط الآيات عالية الصلة (0.75+) يجب أن تحصل على درجات عالية.
+
+أرجع JSON فقط:
+{"scores":[{"id":"verse_id","score":0.85,"reason":"سبب قصير"}]}`;
+
+  const userMessage = lang === 'en'
+    ? `Query: "${query}"
+
+Verses to score:
+${versesForLLM.map((v, i) => `${i+1}. ID: ${v.id}, Ref: ${v.source_ref}
+Arabic: ${v.text_ar}
+English: ${v.text_en || 'N/A'}`).join('\n\n')}
+
+Score each verse 0-1 for relevance to the query. Be strict.`
+    : `السؤال: "${query}"
+
+الآيات للتقييم:
+${versesForLLM.map((v, i) => `${i+1}. رقم: ${v.id}, المرجع: ${v.source_ref}
+عربي: ${v.text_ar}
+إنجليزي: ${v.text_en || 'غير متوفر'}`).join('\n\n')}
+
+قيم كل آية من 0-1 حسب صلتها بالسؤال. كن صارماً.`;
+
+  console.log('Starting LLM re-ranking...');
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.1,
+      max_tokens: 1000,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('LLM re-ranking API error:', errorText);
+    throw new Error(`LLM re-ranking failed: ${errorText}`);
+  }
+
+  const data = await response.json();
+  const gptResponse = data.choices[0].message.content;
+  console.log('LLM re-ranking raw response:', gptResponse);
+
+  // Parse JSON response safely
+  let rerankResponse: LLMRerankResponse;
+  try {
+    rerankResponse = JSON.parse(gptResponse);
+  } catch (parseError) {
+    console.error('Failed to parse LLM re-ranking response:', gptResponse);
+    // Try to extract JSON with regex as fallback
+    const jsonMatch = gptResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        rerankResponse = JSON.parse(jsonMatch[0]);
+      } catch (regexParseError) {
+        throw new Error('Failed to parse LLM response as JSON');
+      }
+    } else {
+      throw new Error('No valid JSON found in LLM response');
+    }
+  }
+
+  // Merge scores back into verses
+  const scoreMap = new Map(rerankResponse.scores.map(s => [s.id, s.score]));
+  const rerankedVerses = verses.map(v => ({
+    ...v,
+    llm_score: scoreMap.get(v.id) || 0
+  }));
+
+  // Filter and sort
+  const MIN_LLM_SCORE = 0.75;
+  const filteredVerses = rerankedVerses
+    .filter(v => v.llm_score >= MIN_LLM_SCORE)
+    .sort((a, b) => b.llm_score - a.llm_score)
+    .slice(0, 3);
+
+  console.log('LLM scores applied:', rerankResponse.scores.length, 'filtered to:', filteredVerses.length);
+  
+  return filteredVerses;
 }
