@@ -49,6 +49,39 @@ export type Database = {
           },
         ]
       }
+      cached_queries: {
+        Row: {
+          created_at: string | null
+          dua: string | null
+          hadith: Json | null
+          key: string
+          lang: string
+          practical_tip: string | null
+          query: string
+          verses: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          dua?: string | null
+          hadith?: Json | null
+          key: string
+          lang: string
+          practical_tip?: string | null
+          query: string
+          verses?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          dua?: string | null
+          hadith?: Json | null
+          key?: string
+          lang?: string
+          practical_tip?: string | null
+          query?: string
+          verses?: Json | null
+        }
+        Relationships: []
+      }
       daily_reminders: {
         Row: {
           content: string
@@ -82,6 +115,24 @@ export type Database = {
           scheduled_time?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      embedding_cache: {
+        Row: {
+          created_at: string | null
+          embedding: number[]
+          key: string
+        }
+        Insert: {
+          created_at?: string | null
+          embedding: number[]
+          key: string
+        }
+        Update: {
+          created_at?: string | null
+          embedding?: number[]
+          key?: string
         }
         Relationships: []
       }
@@ -703,6 +754,21 @@ export type Database = {
       normalize_arabic: {
         Args: { input_text: string }
         Returns: string
+      }
+      search_hadith_local: {
+        Args: {
+          q: string
+          lang?: string
+          q_embedding?: string
+          limit_n?: number
+        }
+        Returns: {
+          id: string
+          source_ref: string
+          text_ar: string
+          text_en: string
+          score: number
+        }[]
       }
       search_verses_local: {
         Args: {

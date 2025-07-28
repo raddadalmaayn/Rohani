@@ -12,6 +12,19 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Cache crypto for consistent hashing
+const crypto = globalThis.crypto;
+
+// Helper function to create cache key
+function createCacheKey(query: string, lang: string): string {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(query + lang);
+  return crypto.subtle.digest('SHA-256', data).then(hash => {
+    const hashArray = Array.from(new Uint8Array(hash));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  });
+}
+
 interface ScriptureResult {
   id: string;
   source_ref: string;
@@ -38,6 +51,7 @@ interface LLMRerankResponse {
 }
 
 serve(async (req) => {
+  console.time('total');
   console.log('Ask Scripture function called');
 
   // Handle CORS preflight requests
@@ -58,53 +72,105 @@ serve(async (req) => {
       throw new Error('Query is required');
     }
 
+    // Check cache first
+    const cacheKey = await createCacheKey(query, lang);
+    console.log('Cache key:', cacheKey);
+    
+    const { data: cachedResult } = await supabase
+      .from('cached_queries')
+      .select('*')
+      .eq('key', cacheKey)
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // 24h cache
+      .maybeSingle();
+    
+    if (cachedResult) {
+      console.log('Cache hit! Returning cached result');
+      console.timeEnd('total');
+      return new Response(JSON.stringify({
+        ayat: cachedResult.verses || [],
+        ahadith: cachedResult.hadith || [],
+        generic_tip: cachedResult.practical_tip,
+        dua: cachedResult.dua,
+        is_sensitive: false
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Check for sensitive religious topics that require scholars
     const sensitiveTopics = /(?:طلاق|حرام|حلال|فتوى|زكاة|ميراث|أحكام|فقه)/i;
     const isSensitiveTopic = sensitiveTopics.test(query);
 
-    // 1. Get embedding for the query (with fallback for quota issues)
-    console.log('Getting embedding for query...');
+    // 1. Start parallel operations
+    console.time('embed');
+    
+    // Check embedding cache first
+    const embeddingCacheKey = await createCacheKey(query, 'embedding');
+    const { data: cachedEmbedding } = await supabase
+      .from('embedding_cache')
+      .select('embedding')
+      .eq('key', embeddingCacheKey)
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // 7 day cache
+      .maybeSingle();
+    
     let queryEmbedding: number[] | null = null;
     
-    try {
-      const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          input: query,
-          model: 'text-embedding-ada-002'  // Use the more available model
-        }),
-      });
+    if (cachedEmbedding) {
+      console.log('Embedding cache hit!');
+      queryEmbedding = cachedEmbedding.embedding;
+      console.timeEnd('embed');
+    } else {
+      try {
+        const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            input: query,
+            model: 'text-embedding-ada-002'  
+          }),
+        });
 
-      if (!embeddingResponse.ok) {
-        const errorText = await embeddingResponse.text();
-        console.error('OpenAI Embedding API error:', errorText);
-        
-        // Check if it's a quota error
-        if (errorText.includes('insufficient_quota')) {
-          console.log('Quota exceeded, falling back to text search...');
-          queryEmbedding = null; // Will trigger fallback search
+        if (!embeddingResponse.ok) {
+          const errorText = await embeddingResponse.text();
+          console.error('OpenAI Embedding API error:', errorText);
+          
+          if (errorText.includes('insufficient_quota')) {
+            console.log('Quota exceeded, falling back to text search...');
+            queryEmbedding = null;
+          } else {
+            throw new Error(`OpenAI Embedding API error: ${errorText}`);
+          }
         } else {
-          throw new Error(`OpenAI Embedding API error: ${errorText}`);
+          const embeddingData = await embeddingResponse.json();
+          queryEmbedding = embeddingData.data[0].embedding;
+          
+          // Cache the embedding for future use
+          try {
+            await supabase.from('embedding_cache').insert({
+              key: embeddingCacheKey,
+              embedding: queryEmbedding
+            });
+          } catch (cacheError) {
+            console.log('Failed to cache embedding:', cacheError);
+          }
         }
-      } else {
-        const embeddingData = await embeddingResponse.json();
-        queryEmbedding = embeddingData.data[0].embedding;
+        console.timeEnd('embed');
+      } catch (embeddingError) {
+        console.error('Embedding generation failed:', embeddingError);
+        queryEmbedding = null;
+        console.timeEnd('embed');
       }
-    } catch (embeddingError) {
-      console.error('Embedding generation failed:', embeddingError);
-      queryEmbedding = null; // Will trigger fallback search
     }
 
-    // 2. Search for similar scriptures using enhanced search with synonyms
-    console.log('Searching for scriptures...');
-    let quranResults = [];
-    let hadithResults = [];
+    // 2. Start parallel operations after embedding
+    console.time('db_quran');
+    console.time('db_hadith');
+    console.time('llm_advice');
     
-    // First, expand query with synonyms for better matching
+    // Expand query with synonyms for better matching
     const { data: expandedQuery } = await supabase
       .rpc('expand_query_with_synonyms', { 
         input_query: query, 
@@ -114,22 +180,41 @@ serve(async (req) => {
     const searchQuery = expandedQuery || query;
     console.log(`Original query: "${query}", Expanded: "${searchQuery}"`);
     
+    let quranResults = [];
+    let hadithResults = [];
+    let llmAdvice: LLMResponse;
+    
     if (queryEmbedding) {
       console.log('Using semantic search with embeddings...');
       
-      // Search local verses using expanded query - limit to 12 for LLM re-ranking
-      const { data: versesData, error: versesError } = await supabase
-        .rpc('search_verses_local', {
+      // Parallel search operations
+      const [versesPromise, hadithPromise, advicePromise] = await Promise.allSettled([
+        // Verses search
+        supabase.rpc('search_verses_local', {
           q: searchQuery,
           lang: lang,
           q_embedding: `[${queryEmbedding.join(',')}]`,
           limit_n: 12
-        });
-
-      if (!versesError && versesData) {
-        console.log('raw:', versesData.length);
+        }),
         
-        // Convert to expected format first
+        // Hadith search  
+        supabase.rpc('search_hadith_local', {
+          q: searchQuery,
+          lang: lang,
+          q_embedding: queryEmbedding,
+          limit_n: 12
+        }),
+        
+        // LLM advice generation (start early)
+        generateAdviceParallel(query, lang, [])
+      ]);
+      
+      // Process verses results
+      console.timeEnd('db_quran');
+      if (versesPromise.status === 'fulfilled' && versesPromise.value.data) {
+        const versesData = versesPromise.value.data;
+        console.log('raw verses:', versesData.length);
+        
         const rawVerses = versesData.map(v => ({
           id: v.id.toString(),
           source_ref: `${v.surah_name_ar} ${v.ayah_number}`,
@@ -138,73 +223,77 @@ serve(async (req) => {
           similarity: v.score
         }));
 
-        // Apply LLM re-ranking if we have verses
-        if (rawVerses.length > 0) {
+        // Apply conditional LLM re-ranking
+        if (rawVerses.length > 3 || (rawVerses.length > 0 && Math.max(...rawVerses.map(r => r.similarity)) < 0.80)) {
+          console.time('llm_rerank');
           try {
             const rerankedVerses = await rerankVersesWithLLM(query, rawVerses, lang);
             quranResults = rerankedVerses;
             console.log('afterLLM:', quranResults.length);
           } catch (llmError) {
             console.error('LLM re-ranking failed, using fallback:', llmError);
-            // Fallback: use local score threshold
-            const MIN_VERSE_SCORE = 0.65;
+            const MIN_VERSE_SCORE = 0.60;
             quranResults = rawVerses.filter(r => r.similarity >= MIN_VERSE_SCORE).slice(0, 3);
             console.log('afterLLM (fallback):', quranResults.length);
           }
+          console.timeEnd('llm_rerank');
         } else {
-          quranResults = [];
+          // Skip LLM re-ranking if we have few high-quality results
+          const MIN_VERSE_SCORE = 0.60;
+          quranResults = rawVerses.filter(r => r.similarity >= MIN_VERSE_SCORE).slice(0, 3);
+          console.log('Skipped LLM re-ranking, using local scores:', quranResults.length);
         }
       } else {
-        console.error('Verses search error:', versesError);
+        console.error('Verses search error:', versesPromise.status === 'rejected' ? versesPromise.reason : 'Unknown error');
       }
       
-      // Search Hadith  
-      const { data: hadithData, error: hadithError } = await supabase
-        .rpc('match_hadith', {
-          embedding_input: queryEmbedding,
-          match_count: 5
-        });
-      
-      if (!hadithError && hadithData) {
-        hadithResults = hadithData;
-        console.log('Hadith search returned:', hadithResults.length, 'results');
-      }
-    }
-    
-    // Apply similarity threshold filtering for hadith
-    const MIN_SIM = 0.72;
-    hadithResults = (hadithResults || []).filter(r => r.similarity >= MIN_SIM);
-    
-    console.log('After filtering - Quran:', quranResults.length, 'Hadith:', hadithResults.length);
-    
-    // Randomize equally-ranked hadith to avoid repetition
-    if (hadithResults.length > 1) {
-      // Group by similar similarity scores (difference < 0.01)
-      const similarityGroups = new Map();
-      hadithResults.forEach(hadith => {
-        const similarityKey = Math.round(hadith.similarity * 100);
-        if (!similarityGroups.has(similarityKey)) {
-          similarityGroups.set(similarityKey, []);
-        }
-        similarityGroups.get(similarityKey).push(hadith);
-      });
-      
-      // Shuffle within each group
-      for (const group of similarityGroups.values()) {
-        if (group.length > 1) {
-          for (let i = group.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [group[i], group[j]] = [group[j], group[i]];
+      // Process hadith results
+      console.timeEnd('db_hadith');
+      if (hadithPromise.status === 'fulfilled' && hadithPromise.value.data) {
+        const hadithData = hadithPromise.value.data;
+        console.log('raw hadith:', hadithData.length);
+        
+        // Apply similarity threshold filtering for hadith
+        const MIN_SIM = 0.60;
+        hadithResults = hadithData.filter(r => r.score >= MIN_SIM);
+        
+        // Apply conditional LLM re-ranking for hadith too
+        if (hadithResults.length > 3 || (hadithResults.length > 0 && Math.max(...hadithResults.map(r => r.score)) < 0.80)) {
+          try {
+            const rerankedHadith = await rerankVersesWithLLM(query, hadithResults.map(h => ({
+              id: h.id,
+              source_ref: h.source_ref,
+              text_ar: h.text_ar,
+              text_en: h.text_en,
+              similarity: h.score
+            })), lang);
+            hadithResults = rerankedHadith;
+          } catch (llmError) {
+            console.error('Hadith LLM re-ranking failed:', llmError);
+            hadithResults = hadithResults.filter(r => r.score >= 0.65).slice(0, 3);
           }
+        } else {
+          hadithResults = hadithResults.slice(0, 3);
         }
+        
+        console.log('Hadith search processed:', hadithResults.length, 'results');
       }
       
-      // Rebuild hadith results maintaining similarity order
-      hadithResults = Array.from(similarityGroups.entries())
-        .sort(([a], [b]) => b - a)
-        .flatMap(([, group]) => group)
-        .slice(0, 3);
+      // Get advice result
+      console.timeEnd('llm_advice');
+      if (advicePromise.status === 'fulfilled') {
+        llmAdvice = advicePromise.value;
+      } else {
+        console.error('Advice generation failed:', advicePromise.reason);
+        llmAdvice = generateContextualAdvice(query, [...quranResults, ...hadithResults], lang);
+      }
+    } else {
+      // Text-only fallback path
+      console.log('Using text-only search...');
+      llmAdvice = generateContextualAdvice(query, [], lang);
     }
+    
+    console.log('After processing - Quran:', quranResults.length, 'Hadith:', hadithResults.length);
     
     // Light fallback for verses only if absolutely no results at all
     if (quranResults.length === 0 && hadithResults.length === 0) {
@@ -262,117 +351,11 @@ serve(async (req) => {
       });
     }
 
-    // Continue to GPT generation even if no scriptures found
-    console.log('Proceeding to GPT generation with context...');
-
-    // Create context from found results
-    const allResults = [...quranResults, ...hadithResults];
-    const context = allResults
-      .map((v: any) => `${v.source_ref}: ${v.text_ar}`)
-      .join('\n');
-
-    // Adjust system message based on language
-    const systemMessage = lang === 'en' 
-      ? `You are an Islamic spiritual assistant. Your task is to provide practical and useful advice.
-
-Important guidelines:
-1. For each question, provide a completely different and unique answer
-2. Read the attached texts carefully - if they are suitable for the question, use them. If not, ignore them and provide general advice
-3. Focus on practical advice applicable in daily life (100-150 words)
-4. Avoid repeating the same content in different answers
-5. Make each answer unique and tailored to the specific question
-6. Do not provide religious rulings or fatwas
-
-Response format JSON:
-{
-  "practical_tip": "Unique and useful practical advice...",
-  "dua": "Appropriate prayer starting with O Allah..."
-}`
-      : `أنت مساعد روحي إسلامي متخصص. مهمتك تقديم نصائح عملية مفيدة وفريدة.
-
-إرشادات مهمة:
-1. لكل سؤال، قدم إجابة مختلفة وفريدة تماماً
-2. اقرأ النصوص المرفقة بعناية - إذا كانت مناسبة للسؤال، استخدمها. إذا لم تكن مناسبة، تجاهلها وقدم نصيحة عامة
-3. ركز على النصائح العملية القابلة للتطبيق في الحياة اليومية (100-150 كلمة)
-4. تجنب تكرار نفس المحتوى أو النصوص في إجابات مختلفة
-5. اجعل كل إجابة فريدة ومخصصة للسؤال المحدد
-6. لا تقدم أحكاماً شرعية أو فتاوى
-
-صيغة الرد JSON:
-{
-  "practical_tip": "نصيحة عملية فريدة ومفيدة...",
-  "dua": "دعاء مناسب يبدأ بـ اللهم..."
-}`;
-
-    const userMessage = lang === 'en'
-      ? `Question: ${query}
-
-Reference texts (use only if relevant to the question):
-${context}
-
-Provide unique and useful practical advice for the question, with an appropriate prayer.`
-      : `السؤال: ${query}
-
-النصوص المرجعية (استخدمها فقط إذا كانت مناسبة للسؤال):
-${context}
-
-قدم نصيحة عملية فريدة ومفيدة للسؤال، مع دعاء مناسب.`;
-
-    // 4. Generate practical advice using GPT (with fallback)
-    console.log('Starting GPT generation...');
-    console.log('Context for GPT:', context.substring(0, 200) + '...');
-    
-    let llmAdvice: LLMResponse;
-    
-    try {
-      console.log('Calling OpenAI Chat API...');
-      const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openAIApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: userMessage }
-          ],
-          temperature: 0.8,
-          max_tokens: 600
-        }),
-      });
-
-      console.log('OpenAI API response status:', chatResponse.status);
-      
-      if (!chatResponse.ok) {
-        const errorText = await chatResponse.text();
-        console.error('OpenAI Chat API error:', errorText);
-        throw new Error(`OpenAI Chat API error: ${errorText}`);
-      }
-
-      const chatData = await chatResponse.json();
-      console.log('OpenAI response received:', chatData.choices?.length || 0, 'choices');
-      
-      const gptResponse = chatData.choices[0].message.content;
-      console.log('GPT raw response:', gptResponse);
-
-      // Parse JSON response from GPT
-      try {
-        llmAdvice = JSON.parse(gptResponse);
-        console.log('Successfully parsed GPT response:', llmAdvice);
-      } catch (parseError) {
-        console.error('Failed to parse GPT response as JSON:', gptResponse);
-        console.error('Parse error:', parseError);
-        throw new Error('parse_error');
-      }
-    } catch (gptError) {
-      console.error('GPT generation failed:', gptError);
-      console.log('Using intelligent fallback advice based on context...');
-      
-      // Generate contextual advice based on the search query and found texts
+    // Use the advice that was already generated in parallel
+    if (!llmAdvice) {
+      console.log('Using fallback advice generation...');
+      const allResults = [...quranResults, ...hadithResults];
       llmAdvice = generateContextualAdvice(query, allResults, lang);
-      console.log('Contextual advice generated:', llmAdvice);
     }
 
     // Store query for analytics (optional)
@@ -405,12 +388,29 @@ ${context}
     console.log('Final response being sent:', JSON.stringify(finalResponse, null, 2));
     console.log('Response timestamp:', new Date().toISOString());
     
+    // Cache the result for future queries
+    try {
+      await supabase.from('cached_queries').insert({
+        key: cacheKey,
+        lang: lang,
+        query: query,
+        verses: finalResponse.ayat,
+        hadith: finalResponse.ahadith,
+        practical_tip: finalResponse.generic_tip,
+        dua: finalResponse.dua
+      });
+      console.log('Result cached successfully');
+    } catch (cacheError) {
+      console.log('Failed to cache result:', cacheError);
+    }
+    
     // Add notice if no scriptures were found but still provide advice
     const responseWithNotice = {
       ...finalResponse,
       no_scripture_notice: (quranResults.length === 0 && hadithResults.length === 0)
     };
     
+    console.timeEnd('total');
     return new Response(JSON.stringify(responseWithNotice), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -598,4 +598,92 @@ ${versesForLLM.map((v, i) => `${i+1}. رقم: ${v.id}, المرجع: ${v.source_
   console.log('LLM scores applied:', rerankResponse.scores.length, 'filtered to:', filteredVerses.length);
   
   return filteredVerses;
+}
+
+// Parallel advice generation function
+async function generateAdviceParallel(query: string, lang: string, context: any[]): Promise<LLMResponse> {
+  const contextText = context
+    .map((v: any) => `${v.source_ref}: ${v.text_ar}`)
+    .join('\n');
+
+  const systemMessage = lang === 'en' 
+    ? `You are an Islamic spiritual assistant. Your task is to provide practical and useful advice.
+
+Important guidelines:
+1. For each question, provide a completely different and unique answer
+2. Read the attached texts carefully - if they are suitable for the question, use them. If not, ignore them and provide general advice
+3. Focus on practical advice applicable in daily life (100-150 words)
+4. Avoid repeating the same content in different answers
+5. Make each answer unique and tailored to the specific question
+6. Do not provide religious rulings or fatwas
+
+Response format JSON:
+{
+  "practical_tip": "Unique and useful practical advice...",
+  "dua": "Appropriate prayer starting with O Allah..."
+}`
+    : `أنت مساعد روحي إسلامي متخصص. مهمتك تقديم نصائح عملية مفيدة وفريدة.
+
+إرشادات مهمة:
+1. لكل سؤال، قدم إجابة مختلفة وفريدة تماماً
+2. اقرأ النصوص المرفقة بعناية - إذا كانت مناسبة للسؤال، استخدمها. إذا لم تكن مناسبة، تجاهلها وقدم نصيحة عامة
+3. ركز على النصائح العملية القابلة للتطبيق في الحياة اليومية (100-150 كلمة)
+4. تجنب تكرار نفس المحتوى أو النصوص في إجابات مختلفة
+5. اجعل كل إجابة فريدة ومخصصة للسؤال المحدد
+6. لا تقدم أحكاماً شرعية أو فتاوى
+
+صيغة الرد JSON:
+{
+  "practical_tip": "نصيحة عملية فريدة ومفيدة...",
+  "dua": "دعاء مناسب يبدأ بـ اللهم..."
+}`;
+
+  const userMessage = lang === 'en'
+    ? `Question: ${query}
+
+Reference texts (use only if relevant to the question):
+${contextText}
+
+Provide unique and useful practical advice for the question, with an appropriate prayer.`
+    : `السؤال: ${query}
+
+النصوص المرجعية (استخدمها فقط إذا كانت مناسبة للسؤال):
+${contextText}
+
+قدم نصيحة عملية فريدة ومفيدة للسؤال، مع دعاء مناسب.`;
+
+  console.log('Starting parallel GPT generation...');
+  
+  const chatResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.8,
+      max_tokens: 600
+    }),
+  });
+
+  if (!chatResponse.ok) {
+    const errorText = await chatResponse.text();
+    console.error('Parallel GPT API error:', errorText);
+    throw new Error(`Parallel GPT API error: ${errorText}`);
+  }
+
+  const chatData = await chatResponse.json();
+  const gptResponse = chatData.choices[0].message.content;
+  
+  try {
+    return JSON.parse(gptResponse);
+  } catch (parseError) {
+    console.error('Failed to parse parallel GPT response:', gptResponse);
+    throw new Error('Failed to parse parallel GPT response as JSON');
+  }
 }
