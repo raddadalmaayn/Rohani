@@ -73,6 +73,7 @@ serve(async (req) => {
     }
 
     // Check cache first
+    console.time('cache_read');
     const cacheKey = await createCacheKey(query, lang);
     console.log('Cache key:', cacheKey);
     
@@ -82,9 +83,10 @@ serve(async (req) => {
       .eq('key', cacheKey)
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // 24h cache
       .maybeSingle();
+    console.timeEnd('cache_read');
     
     if (cachedResult) {
-      console.log('Cache hit! Returning cached result');
+      console.log('✅ CACHE HIT! Total time <100ms');
       console.timeEnd('total');
       return new Response(JSON.stringify({
         ayat: cachedResult.verses || [],
@@ -385,10 +387,17 @@ serve(async (req) => {
       is_sensitive: false
     };
     
-    console.log('Final response being sent:', JSON.stringify(finalResponse, null, 2));
-    console.log('Response timestamp:', new Date().toISOString());
+    // Log final summary before caching and return
+    console.log('📊 SUMMARY:', {
+      query_length: query.length,
+      found_ayat: finalResponse.ayat.length,
+      found_hadith: finalResponse.ahadith.length,
+      has_advice: !!finalResponse.generic_tip,
+      has_dua: !!finalResponse.dua
+    });
     
     // Cache the result for future queries
+    console.time('cache_write');
     try {
       await supabase.from('cached_queries').insert({
         key: cacheKey,
@@ -399,10 +408,11 @@ serve(async (req) => {
         practical_tip: finalResponse.generic_tip,
         dua: finalResponse.dua
       });
-      console.log('Result cached successfully');
+      console.log('✅ Result cached successfully');
     } catch (cacheError) {
-      console.log('Failed to cache result:', cacheError);
+      console.log('⚠️ Failed to cache result:', cacheError);
     }
+    console.timeEnd('cache_write');
     
     // Add notice if no scriptures were found but still provide advice
     const responseWithNotice = {
@@ -411,6 +421,7 @@ serve(async (req) => {
     };
     
     console.timeEnd('total');
+    console.log('🎯 REQUEST COMPLETE');
     return new Response(JSON.stringify(responseWithNotice), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

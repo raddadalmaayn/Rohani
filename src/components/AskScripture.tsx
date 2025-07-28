@@ -83,65 +83,8 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
 
       const response: LLMResponse = data;
       
-      // If no results found, try generating embeddings first
-      if ((!response.ayat || response.ayat.length === 0) && (!response.ahadith || response.ahadith.length === 0)) {
-        console.log('No results found, checking if embeddings exist...');
-        
-        // Check if any embeddings exist
-        const { data: embeddingCheck } = await supabase
-          .from('quran')
-          .select('embedding')
-          .not('embedding', 'is', null)
-          .limit(1);
-        
-        if (!embeddingCheck || embeddingCheck.length === 0) {
-          console.log('No embeddings found, generating embeddings first...');
-          toast({
-            title: currentLanguage === 'ar' ? 'إعداد النظام' : 'System Setup',
-            description: currentLanguage === 'ar' 
-              ? 'جاري إعداد قاعدة البيانات للمرة الأولى، يرجى الانتظار...' 
-              : 'Setting up database for the first time, please wait...',
-          });
-          
-          // Generate embeddings
-          const { data: embeddingResponse, error: embeddingError } = await supabase.functions.invoke('generate-embeddings-enhanced');
-          
-          if (embeddingError) {
-            console.error('Embedding generation error:', embeddingError);
-          } else {
-            console.log('Embeddings generated:', embeddingResponse);
-            
-            // Retry the search after a short delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            const retryResponse = await supabase.functions.invoke('ask-scripture', {
-              body: { 
-                query: query.trim(),
-                lang: currentLanguage,
-                user_id: (await supabase.auth.getUser()).data.user?.id 
-              }
-            });
-            
-            if (!retryResponse.error && (retryResponse.data?.ayat?.length > 0 || retryResponse.data?.ahadith?.length > 0)) {
-              const retryData: LLMResponse = retryResponse.data;
-              setAyat(retryData.ayat || []);
-              setAhadith(retryData.ahadith || []);
-              setPracticalTip(retryData.generic_tip || '');
-              setDua(retryData.dua || '');
-              setIsSensitive(retryData.is_sensitive || false);
-              setNoScriptureNotice(retryData.no_scripture_notice || false);
-              
-              toast({
-                title: currentLanguage === 'ar' ? 'تم العثور على نتائج' : 'Results Found',
-                description: currentLanguage === 'ar' 
-                  ? `وُجدت ${(retryData.ayat?.length || 0) + (retryData.ahadith?.length || 0)} نصوص ذات صلة`
-                  : `Found ${(retryData.ayat?.length || 0) + (retryData.ahadith?.length || 0)} relevant texts`,
-              });
-              return;
-            }
-          }
-        }
-      }
+      // Response received, process it normally
+      console.log('Response received successfully');
       
       console.log('Setting response data:', {
         ayat: response.ayat?.length || 0,
