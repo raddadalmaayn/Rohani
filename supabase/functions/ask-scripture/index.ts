@@ -50,6 +50,10 @@ interface LLMRerankResponse {
   scores: VerseScore[];
 }
 
+interface StrictFilterResponse {
+  keep: number[];
+}
+
 serve(async (req) => {
   console.time('total');
   console.log('Ask Scripture function called');
@@ -225,26 +229,23 @@ serve(async (req) => {
           similarity: v.score
         }));
 
-        // Apply conditional LLM re-ranking
-        if (rawVerses.length > 3 || (rawVerses.length > 0 && Math.max(...rawVerses.map(r => r.similarity)) < 0.80)) {
-          console.time('llm_rerank');
-          try {
-            const rerankedVerses = await rerankVersesWithLLM(query, rawVerses, lang);
-            quranResults = rerankedVerses;
-            console.log('afterLLM:', quranResults.length);
-          } catch (llmError) {
-            console.error('LLM re-ranking failed, using fallback:', llmError);
-            const MIN_VERSE_SCORE = 0.60;
-            quranResults = rawVerses.filter(r => r.similarity >= MIN_VERSE_SCORE).slice(0, 3);
-            console.log('afterLLM (fallback):', quranResults.length);
-          }
-          console.timeEnd('llm_rerank');
-        } else {
-          // Skip LLM re-ranking if we have few high-quality results
-          const MIN_VERSE_SCORE = 0.60;
-          quranResults = rawVerses.filter(r => r.similarity >= MIN_VERSE_SCORE).slice(0, 3);
-          console.log('Skipped LLM re-ranking, using local scores:', quranResults.length);
+        // Filter by local score threshold first
+        const MIN_LOCAL_SCORE = 0.68;
+        const versesLocal = rawVerses.filter(v => v.similarity >= MIN_LOCAL_SCORE);
+        console.log('local', versesLocal.length);
+        
+        // Apply strict LLM filtering every time
+        console.time('llm_rerank');
+        try {
+          const versesFinal = await rerankVersesStrict(query, versesLocal, lang);
+          quranResults = versesFinal;
+          console.log('afterLLM', quranResults.length);
+        } catch (llmError) {
+          console.error('LLM re-ranking failed, using fallback:', llmError);
+          quranResults = versesLocal.filter(r => r.similarity >= 0.75).slice(0, 3);
+          console.log('afterLLM (fallback):', quranResults.length);
         }
+        console.timeEnd('llm_rerank');
       } else {
         console.error('Verses search error:', versesPromise.status === 'rejected' ? versesPromise.reason : 'Unknown error');
       }
@@ -609,6 +610,77 @@ ${versesForLLM.map((v, i) => `${i+1}. رقم: ${v.id}, المرجع: ${v.source_
   console.log('LLM scores applied:', rerankResponse.scores.length, 'filtered to:', filteredVerses.length);
   
   return filteredVerses;
+}
+
+// Strict LLM filtering function - returns only highly relevant verses
+async function rerankVersesStrict(query: string, verses: any[], lang: string): Promise<any[]> {
+  if (verses.length === 0) {
+    return [];
+  }
+
+  // Prepare verses for LLM with shorter text for strict filtering
+  const versesForLLM = verses.map(v => ({
+    id: parseInt(v.id),
+    text: v.text_ar.length > 200 ? v.text_ar.substring(0, 200) + '...' : v.text_ar
+  }));
+
+  const systemMessage = `You receive a user question and a list of Qur'an verses.
+Return ONLY the IDs of verses that DIRECTLY answer or comfort
+the question. 0–3 IDs max. Return strict JSON:
+{"keep":[123,456]}`;
+
+  const userMessage = JSON.stringify({
+    question: query,
+    verses: versesForLLM
+  });
+
+  console.log('Starting strict LLM filtering...');
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openAIApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0,
+      max_tokens: 100,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Strict LLM filter API error:', errorText);
+    throw new Error(`Strict LLM filter failed: ${errorText}`);
+  }
+
+  const data = await response.json();
+  const gptResponse = data.choices[0].message.content;
+  console.log('Strict LLM filter raw response:', gptResponse);
+
+  // Parse JSON response safely
+  let filterResponse: StrictFilterResponse;
+  try {
+    filterResponse = JSON.parse(gptResponse);
+  } catch (parseError) {
+    console.error('Failed to parse strict filter response:', gptResponse);
+    // Fallback to local scores if parsing fails
+    return verses.filter(v => v.similarity >= 0.75).slice(0, 3);
+  }
+
+  // Keep only verses whose IDs appear in the "keep" array
+  const keepIds = new Set(filterResponse.keep.map(id => id.toString()));
+  const filteredVerses = verses.filter(v => keepIds.has(v.id));
+  
+  console.log('Strict filter applied - kept:', filteredVerses.length, 'out of', verses.length);
+  
+  return filteredVerses.slice(0, 3);
 }
 
 // Parallel advice generation function
