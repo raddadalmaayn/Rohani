@@ -388,13 +388,20 @@ serve(async (req) => {
       is_sensitive: false
     };
     
+    // Add detailed logging variables for the summary
+    let localCount = 0;
+    let finalCount = quranResults.length;
+    
     // Log final summary before caching and return
-    console.log('📊 SUMMARY:', {
+    console.log('📊 FINAL SUMMARY:', {
       query_length: query.length,
       found_ayat: finalResponse.ayat.length,
       found_hadith: finalResponse.ahadith.length,
       has_advice: !!finalResponse.generic_tip,
-      has_dua: !!finalResponse.dua
+      has_dua: !!finalResponse.dua,
+      cache_used: false,  // Only cache hits log cache_used: true above
+      local_filtered_verses: `local ${localCount} -> afterLLM ${finalCount}`,
+      semantic_scores: quranResults.map(r => r.similarity?.toFixed(2) || 'N/A').join(', ')
     });
     
     // Cache the result for future queries
