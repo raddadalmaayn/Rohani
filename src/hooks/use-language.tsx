@@ -21,6 +21,13 @@ const translations = {
     'header.title': 'روحاني',
     'header.subtitle': 'دقيقة سكينة… كلما تعب قلبك',
     
+    // Onboarding
+    'onboarding.title': 'روحاني',
+    'onboarding.subtitle': 'دقيقة سكينة… كلما تعب قلبك',
+    'onboarding.verse.label': 'آية كريمة',
+    'onboarding.verse.next': 'انقر للآية التالية',
+    'onboarding.button': 'ابدأ الرحلة الروحية',
+    
     // Profile
     'profile.title': 'الملف الشخصي',
     'profile.welcome': 'مرحباً بك في روحاني',
@@ -58,6 +65,13 @@ const translations = {
     // Header
     'header.title': 'Rohani',
     'header.subtitle': 'A moment of peace... whenever your heart is tired',
+    
+    // Onboarding
+    'onboarding.title': 'Rohani',
+    'onboarding.subtitle': 'A moment of peace... whenever your heart is tired',
+    'onboarding.verse.label': 'Noble Verse',
+    'onboarding.verse.next': 'Click for next verse',
+    'onboarding.button': 'Begin Spiritual Journey',
     
     // Profile
     'profile.title': 'Profile',
