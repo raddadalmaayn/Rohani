@@ -105,20 +105,13 @@ export function AskScripture({ language, tradition }: AskScriptureProps) {
       await saveSearch(query.trim(), (response.ayat?.length || 0) + (response.ahadith?.length || 0));
       await updateProgress(1, 0, query.trim());
 
+      // Only show success toast if results were found
       if ((response.ayat && response.ayat.length > 0) || (response.ahadith && response.ahadith.length > 0)) {
         toast({
           title: currentLanguage === 'ar' ? 'تم العثور على نتائج' : 'Results Found',
           description: currentLanguage === 'ar' 
             ? `وُجدت ${(response.ayat?.length || 0) + (response.ahadith?.length || 0)} نصوص ذات صلة`
             : `Found ${(response.ayat?.length || 0) + (response.ahadith?.length || 0)} relevant texts`,
-        });
-      } else {
-        toast({
-          title: currentLanguage === 'ar' ? 'لا توجد نتائج' : 'No Results',
-          description: currentLanguage === 'ar' 
-            ? 'جرب صياغة السؤال بطريقة أخرى' 
-            : 'Try rephrasing your question',
-          variant: 'destructive',
         });
       }
       

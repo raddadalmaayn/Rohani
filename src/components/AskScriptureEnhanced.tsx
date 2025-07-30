@@ -80,18 +80,13 @@ export function AskScriptureEnhanced({ language, tradition }: AskScriptureEnhanc
       await saveSearch(query.trim(), totalResults);
       await updateProgress(1, 0, query.trim());
 
+      // Only show success toast if results were found
       if (totalResults > 0) {
         toast({
           title: currentLanguage === 'ar' ? 'تم العثور على نتائج' : 'Results Found',
           description: currentLanguage === 'ar' 
             ? `وُجدت ${response.ayat?.length || 0} آيات و ${response.ahadith?.length || 0} أحاديث`
             : `Found ${response.ayat?.length || 0} verses and ${response.ahadith?.length || 0} hadiths`,
-        });
-      } else {
-        toast({
-          title: currentLanguage === 'ar' ? 'لا توجد نتائج' : 'No Results',
-          description: currentLanguage === 'ar' ? 'جرب صياغة السؤال بطريقة أخرى' : 'Try rephrasing your question',
-          variant: 'destructive',
         });
       }
       
