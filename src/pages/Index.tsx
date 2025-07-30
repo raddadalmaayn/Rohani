@@ -4,7 +4,7 @@ import { AskScripture } from '@/components/AskScripture';
 import { BookmarksView } from '@/components/BookmarksView';
 import { UserDashboard } from '@/components/UserDashboard';
 import { IslamicCalendarView } from '@/components/IslamicCalendarView';
-import QuranPage from '@/components/QuranPage';
+import { QuranReader } from '@/components/QuranReader';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -52,7 +52,7 @@ const Index = () => {
           />
         );
       case 'quran':
-        return <QuranPage onNavigateHome={() => setCurrentView('scripture')} />;
+        return <QuranReader onNavigateHome={() => setCurrentView('scripture')} />;
       case 'bookmarks':
         return <BookmarksView />;
       case 'dashboard':
@@ -79,7 +79,7 @@ const Index = () => {
 
   // Full-screen layout for Quran page
   if (currentView === 'quran') {
-    return <QuranPage onNavigateHome={() => setCurrentView('scripture')} />;
+    return <QuranReader onNavigateHome={() => setCurrentView('scripture')} />;
   }
 
   return (
