@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, BookOpen, Settings, Search, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BookOpen, Settings, Home } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Surah {
@@ -22,13 +19,13 @@ interface Verse {
   ayah_no_surah: number;
   ayah_ar: string;
   ayah_en?: string;
+  juz_no?: number;
 }
 
 interface QuranPageData {
   pageNumber: number;
   verses: Verse[];
-  startSurah?: string;
-  endSurah?: string;
+  juzNumber?: number;
 }
 
 interface QuranPageProps {
@@ -43,7 +40,6 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
   const [quranPages, setQuranPages] = useState<QuranPageData[]>([]);
   const [loading, setLoading] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
-  const [showTafsir, setShowTafsir] = useState(false);
   const { toast } = useToast();
 
   const touchStartX = useRef<number>(0);
@@ -96,7 +92,7 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
 
       const { data, error } = await supabase
         .from('verses')
-        .select('surah_no, ayah_no_surah, ayah_ar, ayah_en')
+        .select('surah_no, ayah_no_surah, ayah_ar, ayah_en, juz_no')
         .eq('surah_no', surahId)
         .order('ayah_no_surah');
 
@@ -128,9 +124,11 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
     
     for (let i = 0; i < allVerses.length; i += versesPerPage) {
       const pageVerses = allVerses.slice(i, i + versesPerPage);
+      const juzNumber = pageVerses[0]?.juz_no;
       pages.push({
         pageNumber,
         verses: pageVerses,
+        juzNumber,
       });
       pageNumber++;
     }
@@ -209,332 +207,235 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#faf8f3] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 dark:border-amber-400 mx-auto mb-4"></div>
-          <p className="text-amber-800 dark:text-amber-200 font-medium">جاري التحميل...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <p className="text-amber-800 font-medium font-arabic">جاري التحميل...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#fdf8ef' }}>
-      {/* Header Navigation */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-amber-200 p-4">
+    <div className="min-h-screen bg-[#faf8f3]">
+      {/* Header with Surah name and Part number */}
+      <div className="bg-white/90 backdrop-blur-sm border-b border-amber-200/50 px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={goToPreviousSurah}
-              variant="outline"
-              size="sm"
-              className="text-amber-700 border-amber-300"
-            >
-              <ChevronRight className="h-4 w-4 ml-1" />
-              السورة السابقة
-            </Button>
-            
-            <Select
-              value={selectedSurah?.id.toString()}
-              onValueChange={(value) => {
-                const surah = surahs.find(s => s.id === parseInt(value));
-                if (surah) handleSurahSelection(surah);
-              }}
-            >
-              <SelectTrigger className="w-48 border-amber-300">
-                <SelectValue placeholder="اختر السورة" />
-              </SelectTrigger>
-              <SelectContent>
-                {surahs.map((surah) => (
-                  <SelectItem key={surah.id} value={surah.id.toString()}>
-                    <span dir="rtl">{surah.name_ar} - {surah.name_en}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Button
-              onClick={goToNextSurah}
-              variant="outline"
-              size="sm"
-              className="text-amber-700 border-amber-300"
-            >
-              السورة التالية
-              <ChevronLeft className="h-4 w-4 mr-1" />
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
+          {/* Left side - Surah name */}
+          <div className="flex items-center gap-3">
             {onNavigateHome && (
               <Button
                 onClick={onNavigateHome}
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="text-amber-700 border-amber-300"
+                className="text-amber-700 hover:bg-amber-50"
               >
-                <Home className="h-4 w-4 ml-1" />
-                الرئيسية
+                <Home className="h-4 w-4" />
               </Button>
             )}
-            
-            <Button
-              onClick={() => setShowTranslation(!showTranslation)}
-              variant={showTranslation ? "default" : "outline"}
-              size="sm"
-              className="text-amber-700 border-amber-300"
-            >
-              <BookOpen className="h-4 w-4 ml-1" />
-              الترجمة
-            </Button>
-            
-            <Button
-              onClick={() => setShowTafsir(!showTafsir)}
-              variant={showTafsir ? "default" : "outline"}
-              size="sm"
-              className="text-amber-700 border-amber-300"
-            >
-              <Settings className="h-4 w-4 ml-1" />
-              التفسير
-            </Button>
+            <h1 className="text-lg font-medium text-amber-800 font-arabic">
+              {selectedSurah?.name_en || 'القرآن الكريم'}
+            </h1>
+          </div>
+
+          {/* Right side - Part number */}
+          <div className="text-right">
+            <span className="text-sm text-amber-600 font-arabic">
+              {currentPage?.juzNumber && `Part ${currentPage.juzNumber}`}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Main Quran Page */}
       <div 
-        className="flex items-center justify-center min-h-[calc(100vh-120px)] p-4"
+        className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {selectedSurah && currentPage ? (
-          <div 
-            className="w-full max-w-2xl shadow-2xl overflow-hidden relative"
-            style={{
-              background: '#fdf8ef',
-              border: '8px solid',
-              borderImage: 'linear-gradient(45deg, #d4af37, #ffd700, #d4af37) 1',
-              borderRadius: '12px'
-            }}
-          >
-            {/* Decorative Header with Traditional Pattern */}
-            <div 
-              className="relative p-6 border-b-4"
-              style={{
-                background: 'linear-gradient(135deg, #f7e98e 0%, #edd55c 50%, #f7e98e 100%)',
-                borderBottomColor: '#d4af37'
-              }}
-            >
-              {/* Traditional Islamic Pattern Border */}
-              <div 
-                className="absolute inset-0 opacity-20"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.4'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                  backgroundSize: '30px 30px'
-                }}
-              ></div>
-              
-              <div className="relative text-center">
-                <div 
-                  className="rounded-lg p-4 border-2 shadow-lg"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    borderColor: '#d4af37'
-                  }}
-                >
-                  <h2 className="text-2xl font-bold text-amber-800 font-othmani" dir="rtl">
-                    سُورَةُ {selectedSurah.name_ar}
-                  </h2>
-                  <p className="text-sm text-amber-600 mt-1">
-                    {selectedSurah.name_en} • {selectedSurah.ayah_count} آية
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Basmala with Traditional Decoration */}
-            {selectedSurah.id !== 9 && currentPageIndex === 0 && (
-              <div className="text-center py-8 relative">
-                <div 
-                  className="absolute inset-0 opacity-10"
-                  style={{
-                    background: 'radial-gradient(circle, #d4af37 1px, transparent 1px)',
-                    backgroundSize: '20px 20px'
-                  }}
-                ></div>
-                <div className="relative inline-block">
+          <div className="w-full max-w-md mx-auto bg-[#fefdfb] rounded-lg shadow-xl border border-amber-100 overflow-hidden">
+            
+            {/* Decorative Surah Header */}
+            {currentPageIndex === 0 && (
+              <div className="text-center py-6 px-4 border-b border-amber-200/50">
+                {/* Ornamental border */}
+                <div className="inline-block border-2 border-amber-300 rounded-lg p-4 bg-gradient-to-r from-amber-50 to-yellow-50">
                   <div 
-                    className="absolute inset-0 rounded-full blur-sm"
-                    style={{ background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(255, 215, 0, 0.2))' }}
-                  ></div>
-                  <p 
-                    className="text-3xl leading-relaxed font-othmani relative px-8 py-4"
+                    className="text-xl font-bold text-amber-800 font-quran mb-1"
                     dir="rtl"
-                    style={{ color: '#8b4513' }}
+                    style={{
+                      background: 'linear-gradient(135deg, #d4af37, #b8860b)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text'
+                    }}
                   >
-                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-                  </p>
+                    سُورَةُ {selectedSurah.name_ar}
+                  </div>
+                  <div className="text-xs text-amber-600 font-arabic">
+                    {selectedSurah.name_en}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Verses Container with Traditional Layout */}
-            <div className="p-8 min-h-[600px] flex flex-col justify-between">
-              <div className="flex-1">
+            {/* Basmala (if not Surah At-Tawbah and first page) */}
+            {selectedSurah.id !== 9 && currentPageIndex === 0 && (
+              <div className="text-center py-6">
                 <div 
-                  className="text-right font-othmani leading-loose text-justify" 
-                  dir="rtl" 
-                  style={{ 
-                    fontSize: '22px',
-                    lineHeight: '2.2',
-                    letterSpacing: '0.02em',
-                    color: '#2d1810'
+                  className="text-2xl font-bold text-amber-800 font-quran leading-relaxed"
+                  dir="rtl"
+                  style={{
+                    background: 'linear-gradient(135deg, #d4af37, #b8860b)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
                   }}
                 >
-                  {currentPage.verses.map((verse, index) => (
-                    <span key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
-                      {/* Verse Text */}
-                      <span className="inline">
-                        {verse.ayah_ar}
-                      </span>
-                      
-                      {/* Traditional Ayah Number in decorative circle */}
-                      <span className="inline-block mx-2 align-middle">
-                        <span 
-                          className="inline-flex items-center justify-center w-7 h-7 border-2 rounded-full text-xs font-bold relative"
-                          style={{ 
-                            borderColor: '#d4af37',
-                            background: 'radial-gradient(circle, rgba(252, 211, 77, 0.4) 0%, rgba(245, 158, 11, 0.2) 100%)',
-                            color: '#8b4513'
-                          }}
-                        >
-                          {formatArabicNumber(verse.ayah_no_surah)}
-                        </span>
-                      </span>
-                      
-                      {/* Add space between verses */}
-                      <span className="inline-block w-2"></span>
-                    </span>
-                  ))}
-                  
-                  {/* Translation section (if enabled) */}
-                  {showTranslation && (
-                    <div className="mt-6 pt-4 border-t border-amber-200">
-                      <h4 className="text-sm font-semibold text-amber-800 mb-3" dir="rtl">الترجمة:</h4>
-                      {currentPage.verses.map((verse, index) => (
-                        verse.ayah_en && (
-                          <div key={`translation-${verse.surah_no}-${verse.ayah_no_surah}`} className="mb-2 text-sm text-gray-700 text-left" dir="ltr">
-                            <span className="font-medium">({verse.ayah_no_surah})</span> {verse.ayah_en}
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Tafsir section (if enabled) */}
-                  {showTafsir && (
-                    <div className="mt-6 pt-4 border-t border-amber-200">
-                      <h4 className="text-sm font-semibold text-amber-800 mb-3" dir="rtl">التفسير:</h4>
-                      {currentPage.verses.map((verse, index) => (
-                        <div 
-                          key={`tafsir-${verse.surah_no}-${verse.ayah_no_surah}`}
-                          className="mb-3 text-xs p-3 rounded-lg border" 
-                          dir="rtl"
-                          style={{
-                            color: '#8b4513',
-                            background: 'rgba(245, 158, 11, 0.1)',
-                            borderColor: '#d4af37'
-                          }}
-                        >
-                          <span className="font-medium">آية {formatArabicNumber(verse.ayah_no_surah)}:</span> تفسير الآية من سورة {selectedSurah.name_ar}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                 </div>
               </div>
+            )}
 
-              {/* Page Number with Traditional Style */}
-              <div className="text-center mt-8 pt-4 border-t-2" style={{ borderColor: '#d4af37' }}>
-                <div className="inline-flex items-center gap-4">
-                  <Button
-                    onClick={goToPreviousPage}
-                    variant="ghost"
-                    size="sm"
-                    className="text-amber-600"
-                    disabled={currentPageIndex === 0}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  
-                  <div 
-                    className="px-4 py-2 rounded-lg border-2"
-                    style={{
-                      background: 'linear-gradient(135deg, #f7e98e, #edd55c)',
-                      borderColor: '#d4af37',
-                      color: '#8b4513'
+            {/* Verses Container */}
+            <div className="px-6 py-8 min-h-[500px]">
+              <div 
+                className="text-right font-quran leading-loose text-justify"
+                dir="rtl"
+                style={{ 
+                  fontSize: '20px',
+                  lineHeight: '2.2',
+                  letterSpacing: '0.02em',
+                  color: '#2c1810',
+                  textAlignLast: 'justify'
+                }}
+              >
+                {currentPage.verses.map((verse, index) => (
+                  <span key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
+                    {/* Verse Text */}
+                    <span className="inline">{verse.ayah_ar}</span>
+                    
+                    {/* Ayah Number */}
+                    <span className="inline-block mx-2 align-middle">
+                      <span 
+                        className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold relative"
+                        style={{ 
+                          background: 'radial-gradient(circle, #f7e98e 0%, #edd55c 100%)',
+                          border: '2px solid #d4af37',
+                          borderRadius: '50%',
+                          color: '#8b4513',
+                          fontSize: '10px'
+                        }}
+                      >
+                        {formatArabicNumber(verse.ayah_no_surah)}
+                      </span>
+                    </span>
+                    
+                    {/* Space between verses */}
+                    <span className="inline-block w-1"></span>
+                  </span>
+                ))}
+              </div>
+
+              {/* Translation Section */}
+              {showTranslation && (
+                <div className="mt-8 pt-6 border-t border-amber-200/50">
+                  <h4 className="text-sm font-semibold text-amber-800 mb-4 font-arabic" dir="rtl">
+                    الترجمة الإنجليزية:
+                  </h4>
+                  <div className="space-y-3">
+                    {currentPage.verses.map((verse, index) => (
+                      verse.ayah_en && (
+                        <div key={`translation-${verse.surah_no}-${verse.ayah_no_surah}`} className="text-sm text-gray-700 text-left" dir="ltr">
+                          <span className="font-medium text-amber-700">({verse.ayah_no_surah})</span> {verse.ayah_en}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Navigation */}
+            <div className="px-6 py-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-t border-amber-200/50">
+              <div className="flex items-center justify-between">
+                {/* Previous Page */}
+                <Button
+                  onClick={goToPreviousPage}
+                  variant="ghost"
+                  size="sm"
+                  className="text-amber-600 hover:bg-amber-100"
+                  disabled={currentPageIndex === 0}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                
+                {/* Page Counter */}
+                <div className="flex items-center gap-3">
+                  <Select
+                    value={selectedSurah?.id.toString()}
+                    onValueChange={(value) => {
+                      const surah = surahs.find(s => s.id === parseInt(value));
+                      if (surah) handleSurahSelection(surah);
                     }}
                   >
-                    <span className="font-medium">
-                      صفحة {formatArabicNumber(currentPageIndex + 1)} من {formatArabicNumber(quranPages.length)}
-                    </span>
-                  </div>
+                    <SelectTrigger className="w-32 h-8 text-xs border-amber-300 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {surahs.map((surah) => (
+                        <SelectItem key={surah.id} value={surah.id.toString()}>
+                          <span className="font-arabic">{surah.name_ar}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   
                   <Button
-                    onClick={goToNextPage}
-                    variant="ghost"
+                    onClick={() => setShowTranslation(!showTranslation)}
+                    variant={showTranslation ? "default" : "outline"}
                     size="sm"
-                    className="text-amber-600"
-                    disabled={currentPageIndex === quranPages.length - 1}
+                    className="h-8 text-xs"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <BookOpen className="h-3 w-3 mr-1" />
+                    Translation
                   </Button>
                 </div>
+                
+                {/* Next Page */}
+                <Button
+                  onClick={goToNextPage}
+                  variant="ghost"
+                  size="sm"
+                  className="text-amber-600 hover:bg-amber-100"
+                  disabled={currentPageIndex === quranPages.length - 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Page Info */}
+              <div className="text-center mt-3">
+                <span className="text-xs text-amber-600 font-arabic">
+                  صفحة {formatArabicNumber(currentPageIndex + 1)} من {formatArabicNumber(quranPages.length)}
+                </span>
               </div>
             </div>
           </div>
         ) : (
-          <div 
-            className="w-full max-w-md p-8 border border-amber-200 shadow-lg rounded-lg"
-            style={{ background: '#fdf8ef' }}
-          >
+          <div className="w-full max-w-md p-8 bg-white border border-amber-200 shadow-lg rounded-lg">
             <div className="text-center">
               <BookOpen className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-amber-800 mb-2">
-                مرحباً بك في المصحف الشريف
+              <h3 className="text-xl font-bold text-amber-800 mb-2 font-arabic">
+                القرآن الكريم
               </h3>
-              <p className="text-amber-600 mb-4">
-                اختر سورة لبدء القراءة
+              <p className="text-amber-600 font-arabic">
+                اختر سورة للبدء في القراءة
               </p>
-              <Select
-                onValueChange={(value) => {
-                  const surah = surahs.find(s => s.id === parseInt(value));
-                  if (surah) handleSurahSelection(surah);
-                }}
-              >
-                <SelectTrigger className="border-amber-300">
-                  <SelectValue placeholder="اختر السورة" />
-                </SelectTrigger>
-                <SelectContent>
-                  {surahs.map((surah) => (
-                    <SelectItem key={surah.id} value={surah.id.toString()}>
-                      <span dir="rtl">{surah.name_ar} - {surah.name_en}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
         )}
-      </div>
-
-      {/* Usage Instructions */}
-      <div 
-        className="text-center p-4 border-t border-amber-200"
-        style={{ background: 'rgba(255, 255, 255, 0.6)' }}
-      >
-        <p className="text-sm text-amber-600">
-          اسحب يميناً أو يساراً لتصفح الصفحات • انقر على الأزرار للتنقل بين السور
-        </p>
       </div>
     </div>
   );

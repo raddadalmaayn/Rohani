@@ -21,8 +21,9 @@ export default {
 			fontFamily: {
 				sans: ["Inter", "sans-serif"],
 				arabic: ["Noto Sans Arabic", "sans-serif"],
-				quran: ["Amiri Quran", "Amiri", "serif"],
+				quran: ["Amiri Quran", "Scheherazade New", "Noto Kufi Arabic", "serif"],
 				othmani: ["Scheherazade New", "Amiri Quran", "Amiri", "serif"],
+				kufi: ["Noto Kufi Arabic", "Amiri", "serif"],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
