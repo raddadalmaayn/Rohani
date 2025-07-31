@@ -381,26 +381,26 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
             <div className="p-8 min-h-[600px] flex flex-col justify-between">
               <div className="flex-1">
                 <div 
-                  className="text-right font-othmani leading-loose" 
+                  className="text-right font-othmani leading-loose text-justify" 
                   dir="rtl" 
                   style={{ 
                     fontSize: '22px',
-                    lineHeight: '2.5',
+                    lineHeight: '2.2',
                     letterSpacing: '0.02em',
                     color: '#2d1810'
                   }}
                 >
                   {currentPage.verses.map((verse, index) => (
-                    <div key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="mb-4 relative">
+                    <span key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
                       {/* Verse Text */}
                       <span className="inline">
                         {verse.ayah_ar}
                       </span>
                       
                       {/* Traditional Ayah Number in decorative circle */}
-                      <span className="inline-block mx-3 align-middle">
+                      <span className="inline-block mx-2 align-middle">
                         <span 
-                          className="inline-flex items-center justify-center w-8 h-8 border-2 rounded-full text-sm font-bold relative"
+                          className="inline-flex items-center justify-center w-7 h-7 border-2 rounded-full text-xs font-bold relative"
                           style={{ 
                             borderColor: '#d4af37',
                             background: 'radial-gradient(circle, rgba(252, 211, 77, 0.4) 0%, rgba(245, 158, 11, 0.2) 100%)',
@@ -411,17 +411,33 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                         </span>
                       </span>
                       
-                      {/* Translation (if enabled) */}
-                      {showTranslation && verse.ayah_en && (
-                        <div className="mt-3 text-sm text-gray-700 italic text-left" dir="ltr">
-                          {verse.ayah_en}
-                        </div>
-                      )}
-                      
-                      {/* Tafsir (if enabled) */}
-                      {showTafsir && (
+                      {/* Add space between verses */}
+                      <span className="inline-block w-2"></span>
+                    </span>
+                  ))}
+                  
+                  {/* Translation section (if enabled) */}
+                  {showTranslation && (
+                    <div className="mt-6 pt-4 border-t border-amber-200">
+                      <h4 className="text-sm font-semibold text-amber-800 mb-3" dir="rtl">الترجمة:</h4>
+                      {currentPage.verses.map((verse, index) => (
+                        verse.ayah_en && (
+                          <div key={`translation-${verse.surah_no}-${verse.ayah_no_surah}`} className="mb-2 text-sm text-gray-700 text-left" dir="ltr">
+                            <span className="font-medium">({verse.ayah_no_surah})</span> {verse.ayah_en}
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Tafsir section (if enabled) */}
+                  {showTafsir && (
+                    <div className="mt-6 pt-4 border-t border-amber-200">
+                      <h4 className="text-sm font-semibold text-amber-800 mb-3" dir="rtl">التفسير:</h4>
+                      {currentPage.verses.map((verse, index) => (
                         <div 
-                          className="mt-3 text-xs p-3 rounded-lg border" 
+                          key={`tafsir-${verse.surah_no}-${verse.ayah_no_surah}`}
+                          className="mb-3 text-xs p-3 rounded-lg border" 
                           dir="rtl"
                           style={{
                             color: '#8b4513',
@@ -429,11 +445,11 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                             borderColor: '#d4af37'
                           }}
                         >
-                          تفسير الآية {formatArabicNumber(verse.ayah_no_surah)} من سورة {selectedSurah.name_ar}
+                          <span className="font-medium">آية {formatArabicNumber(verse.ayah_no_surah)}:</span> تفسير الآية من سورة {selectedSurah.name_ar}
                         </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
