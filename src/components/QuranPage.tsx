@@ -20,6 +20,13 @@ interface Verse {
   ayah_ar: string;
   ayah_en?: string;
   juz_no?: number;
+  ruko_no?: number;
+  manzil_no?: number;
+  hizb_quarter?: number;
+  sajah_ayah?: boolean;
+  sajdah_no?: string;
+  surah_name_ar?: string;
+  surah_name_en?: string;
 }
 
 interface QuranPageData {
@@ -92,7 +99,7 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
 
       const { data, error } = await supabase
         .from('verses')
-        .select('surah_no, ayah_no_surah, ayah_ar, ayah_en, juz_no')
+        .select('surah_no, ayah_no_surah, ayah_ar, ayah_en, juz_no, ruko_no, manzil_no, hizb_quarter, sajah_ayah, sajdah_no, surah_name_ar, surah_name_en')
         .eq('surah_no', surahId)
         .order('ayah_no_surah');
 
@@ -207,7 +214,7 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#faf8f3] flex items-center justify-center">
+      <div className="min-h-screen bg-[#f8f6f0] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
           <p className="text-amber-800 font-medium font-arabic">جاري التحميل...</p>
@@ -217,9 +224,9 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf8f3]">
+    <div className="min-h-screen bg-[#f8f6f0]">
       {/* Header with Surah name and Part number */}
-      <div className="bg-white/90 backdrop-blur-sm border-b border-amber-200/50 px-4 py-3">
+      <div className="bg-[#f5f3ed]/95 backdrop-blur-sm border-b border-amber-200/30 px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           {/* Left side - Surah name */}
           <div className="flex items-center gap-3">
@@ -233,16 +240,21 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                 <Home className="h-4 w-4" />
               </Button>
             )}
-            <h1 className="text-lg font-medium text-amber-800 font-arabic">
-              {selectedSurah?.name_en || 'القرآن الكريم'}
-            </h1>
+            <div className="flex flex-col items-start">
+              <h1 className="text-lg font-medium text-amber-800 font-arabic">
+                {selectedSurah?.name_ar || 'القرآن الكريم'}
+              </h1>
+              <span className="text-xs text-amber-600">{selectedSurah?.name_en}</span>
+            </div>
           </div>
 
-          {/* Right side - Part number */}
+          {/* Right side - Part and other info */}
           <div className="text-right">
-            <span className="text-sm text-amber-600 font-arabic">
-              {currentPage?.juzNumber && `Part ${currentPage.juzNumber}`}
-            </span>
+            <div className="flex flex-col items-end text-xs text-amber-600 font-arabic">
+              {currentPage?.juzNumber && <span>الجزء {formatArabicNumber(currentPage.juzNumber)}</span>}
+              {currentPage?.verses[0]?.ruko_no && <span>الركوع {formatArabicNumber(currentPage.verses[0].ruko_no)}</span>}
+              {currentPage?.verses[0]?.manzil_no && <span>المنزل {formatArabicNumber(currentPage.verses[0].manzil_no)}</span>}
+            </div>
           </div>
         </div>
       </div>
@@ -254,7 +266,8 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
         onTouchEnd={handleTouchEnd}
       >
         {selectedSurah && currentPage ? (
-          <div className="w-full max-w-md mx-auto bg-[#fefdfb] rounded-lg shadow-xl border border-amber-100 overflow-hidden">
+          <div className="w-full max-w-md mx-auto bg-[#fefcf7] rounded-lg shadow-lg border border-amber-100/50 overflow-hidden"
+               style={{ backgroundColor: '#fefcf7', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)' }}>
             
             {/* Decorative Surah Header */}
             {currentPageIndex === 0 && (
@@ -316,20 +329,29 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                     {/* Verse Text */}
                     <span className="inline">{verse.ayah_ar}</span>
                     
-                    {/* Ayah Number */}
-                    <span className="inline-block mx-2 align-middle">
+                    {/* Ayah Number with Sajdah indicator */}
+                    <span className="inline-block mx-2 align-middle relative">
                       <span 
-                        className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold relative"
+                        className={`inline-flex items-center justify-center w-6 h-6 text-xs font-bold relative ${
+                          verse.sajah_ayah ? 'animate-pulse' : ''
+                        }`}
                         style={{ 
-                          background: 'radial-gradient(circle, #f7e98e 0%, #edd55c 100%)',
-                          border: '2px solid #d4af37',
+                          background: verse.sajah_ayah 
+                            ? 'radial-gradient(circle, #10b981 0%, #059669 100%)' 
+                            : 'radial-gradient(circle, #f7e98e 0%, #edd55c 100%)',
+                          border: verse.sajah_ayah ? '2px solid #047857' : '2px solid #d4af37',
                           borderRadius: '50%',
-                          color: '#8b4513',
+                          color: verse.sajah_ayah ? 'white' : '#8b4513',
                           fontSize: '10px'
                         }}
+                        title={verse.sajah_ayah ? 'آية سجدة' : undefined}
                       >
                         {formatArabicNumber(verse.ayah_no_surah)}
                       </span>
+                      {/* Sajdah indicator */}
+                      {verse.sajah_ayah && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></span>
+                      )}
                     </span>
                     
                     {/* Space between verses */}
@@ -358,7 +380,7 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
             </div>
 
             {/* Bottom Navigation */}
-            <div className="px-6 py-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-t border-amber-200/50">
+            <div className="px-6 py-4 bg-gradient-to-r from-[#f5f3ed] to-[#f8f6f0] border-t border-amber-200/30">
               <div className="flex items-center justify-between">
                 {/* Previous Page */}
                 <Button
@@ -424,7 +446,7 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
             </div>
           </div>
         ) : (
-          <div className="w-full max-w-md p-8 bg-white border border-amber-200 shadow-lg rounded-lg">
+          <div className="w-full max-w-md p-8 bg-[#fefcf7] border border-amber-200/50 shadow-lg rounded-lg">
             <div className="text-center">
               <BookOpen className="h-12 w-12 text-amber-500 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-amber-800 mb-2 font-arabic">
