@@ -46,6 +46,14 @@ All colors MUST be HSL.
     --input: 60 15% 90%;              /* cream input */
     --ring: 82 47% 34%;               /* rohani-olive focus */
 
+    /* Mushaf specific colors */
+    --mushaf-page: 48 18% 97%;
+    --mushaf-text: 30 20% 8%;
+    --mushaf-header: 45 15% 95%;
+    --mushaf-badge-stroke: 45 70% 58%;
+    --mushaf-badge-fill: 48 85% 96%;
+    --mushaf-sajdah: 142 76% 36%;
+
     /* Spiritual design tokens */
     --gradient-spiritual: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
     --gradient-calm: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
@@ -56,19 +64,12 @@ All colors MUST be HSL.
     --radius: 1rem;                  /* 16px for spiritual roundness */
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -119,13 +120,33 @@ All colors MUST be HSL.
   }
 }
 
-/* Mushaf text styling */
+/* Mushaf text styling with responsive font size */
 .mushafText {
   text-align: justify;
   text-align-last: justify;
   word-spacing: 0.08em;
   line-height: 2.2;
   letter-spacing: 0.02em;
+  font-size: clamp(20px, 4.5vw, 32px);
+}
+
+/* Responsive mushaf wrapper */
+.mushaf-wrapper {
+  width: clamp(280px, 94vw, 640px);
+}
+
+/* Large screen translation layout */
+.translation-grid {
+  display: grid;
+  grid-template-columns: 64% 36%;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 1023px) {
+  .translation-grid {
+    display: block;
+  }
 }
 
 /* Ayah badge hover effect */
@@ -144,7 +165,12 @@ All colors MUST be HSL.
   bottom: 0;
   width: 24px;
   z-index: 10;
-  cursor: pointer;
+  opacity: 0;
+}
+
+.edge-swipe-zone:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
 }
 
 .edge-swipe-left {

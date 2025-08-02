@@ -108,7 +108,34 @@ export const useMushafPages = (isMobile: boolean) => {
 
   const quranPages = useMemo(() => {
     return buildPages(verses);
-  }, [verses, maxCharsPerPage]);
+  }, [verses, maxCharsPerPage, selectedSurah?.id]);
+
+  // Prefetch adjacent surahs
+  useEffect(() => {
+    if (selectedSurah && surahs.length > 0) {
+      const currentIndex = surahs.findIndex(s => s.id === selectedSurah.id);
+      
+      // Prefetch next surah
+      if (currentIndex < surahs.length - 1) {
+        const nextSurahId = surahs[currentIndex + 1].id;
+        if (!verseCache.has(nextSurahId)) {
+          loadVerses(nextSurahId).catch(error => 
+            debug('Error prefetching next surah:', error)
+          );
+        }
+      }
+      
+      // Prefetch previous surah
+      if (currentIndex > 0) {
+        const prevSurahId = surahs[currentIndex - 1].id;
+        if (!verseCache.has(prevSurahId)) {
+          loadVerses(prevSurahId).catch(error => 
+            debug('Error prefetching previous surah:', error)
+          );
+        }
+      }
+    }
+  }, [selectedSurah?.id, surahs]);
 
   useEffect(() => {
     loadSurahs();
@@ -175,9 +202,7 @@ export const useMushafPages = (isMobile: boolean) => {
       const loadedVerses = await loadVerses(surah.id);
       setVerses(loadedVerses);
       setCurrentPageIndex(0);
-      
-      // Pre-fetch adjacent surahs
-      prefetchAdjacentSurahs(surah.id);
+      // Don't prefetch here anymore - handled by useEffect
     } catch (error) {
       debug('Error in handleSurahSelection:', error);
       throw error;
@@ -187,30 +212,7 @@ export const useMushafPages = (isMobile: boolean) => {
   };
 
   const prefetchAdjacentSurahs = async (currentSurahId: number) => {
-    const currentIndex = surahs.findIndex(s => s.id === currentSurahId);
-    const promises: Promise<Verse[]>[] = [];
-    
-    // Pre-fetch previous surah
-    if (currentIndex > 0) {
-      const prevSurahId = surahs[currentIndex - 1].id;
-      if (!verseCache.has(prevSurahId)) {
-        promises.push(loadVerses(prevSurahId));
-      }
-    }
-    
-    // Pre-fetch next surah
-    if (currentIndex < surahs.length - 1) {
-      const nextSurahId = surahs[currentIndex + 1].id;
-      if (!verseCache.has(nextSurahId)) {
-        promises.push(loadVerses(nextSurahId));
-      }
-    }
-    
-    if (promises.length > 0) {
-      Promise.all(promises).catch(error => 
-        debug('Error pre-fetching adjacent surahs:', error)
-      );
-    }
+    // This is now handled by the useEffect above
   };
 
   const goToNextPage = () => {
