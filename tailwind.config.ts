@@ -24,6 +24,7 @@ export default {
 				quran: ["Amiri Quran", "Scheherazade New", "Noto Kufi Arabic", "serif"],
 				othmani: ["Scheherazade New", "Amiri Quran", "Amiri", "serif"],
 				kufi: ["Noto Kufi Arabic", "Amiri", "serif"],
+				mushaf: ["Noto Kufi Arabic", "Amiri Quran", "system-ui", "sans-serif"],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -68,6 +69,16 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				mushaf: {
+					page: 'hsl(var(--mushaf-page))',
+					text: 'hsl(var(--mushaf-text))',
+					header: 'hsl(var(--mushaf-header))',
+					badge: {
+						stroke: 'hsl(var(--mushaf-badge-stroke))',
+						fill: 'hsl(var(--mushaf-badge-fill))'
+					},
+					sajdah: 'hsl(var(--mushaf-sajdah))'
 				}
 			},
 			backgroundImage: {

@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Load Uthmanic Hafs font */
+@font-face {
+  font-family: 'KFGQPC Uthmanic Hafs';
+  src: url('/fonts/uthmanic-hafs.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
@@ -67,6 +76,14 @@ All colors MUST be HSL.
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
 
+    /* Dark mode mushaf colors */
+    --mushaf-page: 35 15% 12%;
+    --mushaf-text: 48 95% 95%;
+    --mushaf-header: 35 10% 8%;
+    --mushaf-badge-stroke: 45 60% 70%;
+    --mushaf-badge-fill: 35 25% 20%;
+    --mushaf-sajdah: 142 60% 50%;
+
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
 
@@ -100,6 +117,42 @@ All colors MUST be HSL.
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+}
+
+/* Mushaf text styling */
+.mushafText {
+  text-align: justify;
+  text-align-last: justify;
+  word-spacing: 0.08em;
+  line-height: 2.2;
+  letter-spacing: 0.02em;
+}
+
+/* Ayah badge hover effect */
+.ayah-badge {
+  transition: transform 150ms ease-in-out;
+}
+
+.ayah-badge:hover {
+  transform: scale(1.2);
+}
+
+/* Edge swipe zones */
+.edge-swipe-zone {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.edge-swipe-left {
+  left: 0;
+}
+
+.edge-swipe-right {
+  right: 0;
 }
 
 @layer base {
