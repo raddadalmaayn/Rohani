@@ -275,7 +275,7 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                         lang="ar"
                       >
                         {page.verses.map((verse) => (
-                          <React.Fragment key={`${verse.surah_no}-${verse.ayah_no_surah}`}>
+                          <div key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
                             {/* Verse Text with enhanced Arabic rendering */}
                             <span className="inline">{enhanceArabicText(verse.ayah_ar)}</span>
                             
@@ -291,7 +291,7 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                             
                             {/* Space between verses */}
                             <span className="inline-block w-1"></span>
-                          </React.Fragment>
+                          </div>
                         ))}
                       </div>
                     )}
