@@ -216,11 +216,14 @@ export const useMushafPages = (isMobile: boolean) => {
   };
 
   const goToNextPage = () => {
+    console.log('goToNextPage called', { currentPageIndex, totalPages: quranPages.length });
     if (currentPageIndex < quranPages.length - 1) {
       setCurrentPageIndex(currentPageIndex + 1);
+      console.log('Moving to next page:', currentPageIndex + 1);
     } else {
       // Go to next surah
       const currentSurahIndex = surahs.findIndex(s => s.id === selectedSurah?.id);
+      console.log('End of surah, trying to move to next surah:', currentSurahIndex + 1);
       if (currentSurahIndex < surahs.length - 1) {
         handleSurahSelection(surahs[currentSurahIndex + 1]);
       }
@@ -228,13 +231,20 @@ export const useMushafPages = (isMobile: boolean) => {
   };
 
   const goToPreviousPage = () => {
+    console.log('goToPreviousPage called', { currentPageIndex, totalPages: quranPages.length });
     if (currentPageIndex > 0) {
       setCurrentPageIndex(currentPageIndex - 1);
+      console.log('Moving to previous page:', currentPageIndex - 1);
     } else {
       // Go to previous surah
       const currentSurahIndex = surahs.findIndex(s => s.id === selectedSurah?.id);
+      console.log('Start of surah, trying to move to previous surah:', currentSurahIndex - 1);
       if (currentSurahIndex > 0) {
-        handleSurahSelection(surahs[currentSurahIndex - 1]);
+        const prevSurah = surahs[currentSurahIndex - 1];
+        handleSurahSelection(prevSurah).then(() => {
+          // After loading previous surah, go to its last page
+          console.log('Previous surah loaded, calculating last page...');
+        });
       }
     }
   };
