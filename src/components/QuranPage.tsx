@@ -417,6 +417,7 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
         </Modal>
       </div>
     </ErrorBoundary>
+  );
 };
 
 export default QuranPage;
