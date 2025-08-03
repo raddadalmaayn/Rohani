@@ -75,9 +75,9 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
     goToNextPage();
   };
 
-  // Prevent body scroll when using mushaf
+  // Allow normal page interaction
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
+    // Don't prevent scrolling/navigation
     return () => {
       document.body.style.overflow = 'auto';
     };
@@ -213,13 +213,13 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                   {pageIndex === 0 && (
                     <div className="text-center py-6 px-4 border-b border-mushaf-badge-stroke/30">
                       <div className="inline-block border-2 border-mushaf-badge-stroke rounded-lg p-4 bg-gradient-to-r from-mushaf-badge-fill to-mushaf-page">
-                        <div 
-                          className="text-xl font-bold text-mushaf-text font-mushaf mb-1"
-                          dir="rtl"
-                          lang="ar"
-                        >
-                          سُورَةُ {selectedSurah.name_ar}
-                        </div>
+                         <div 
+                           className="text-xl font-bold text-mushaf-text font-uthmanic mb-1"
+                           dir="rtl"
+                           lang="ar"
+                         >
+                           سُورَةُ {selectedSurah.name_ar}
+                         </div>
                         <div className="text-xs text-mushaf-text/70 font-arabic" lang="en">
                           {selectedSurah.name_en}
                         </div>
@@ -230,13 +230,13 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                   {/* Basmala (if not Surah At-Tawbah and first page) */}
                   {selectedSurah.id !== 9 && pageIndex === 0 && (
                     <div className="text-center py-6">
-                      <div 
-                        className="text-2xl font-bold text-mushaf-text font-mushaf leading-relaxed"
-                        dir="rtl"
-                        lang="ar"
-                      >
-                        بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-                      </div>
+                       <div 
+                         className="text-2xl font-bold text-mushaf-text font-uthmanic leading-relaxed"
+                         dir="rtl"
+                         lang="ar"
+                       >
+                         بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                       </div>
                     </div>
                   )}
 
@@ -245,11 +245,11 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                     {showTranslation && !isMobile ? (
                       // Large screen: side-by-side layout
                       <div className="translation-grid">
-                        <div 
-                          className="mushafText text-right font-mushaf text-mushaf-text"
-                          dir="rtl"
-                          lang="ar"
-                        >
+                         <div 
+                           className="mushafText text-right font-uthmanic text-mushaf-text"
+                           dir="rtl"
+                           lang="ar"
+                         >
                           {page.verses.map((verse) => (
                             <div key={`ar-${verse.surah_no}-${verse.ayah_no_surah}`} className="mb-4">
                               <span className="inline">{enhanceArabicText(verse.ayah_ar)}</span>
@@ -269,11 +269,11 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                       </div>
                     ) : (
                       // Mobile or translation off: stacked layout
-                      <div 
-                        className="mushafText text-right font-mushaf text-mushaf-text"
-                        dir="rtl"
-                        lang="ar"
-                      >
+                       <div 
+                         className="mushafText text-right font-uthmanic text-mushaf-text"
+                         dir="rtl"
+                         lang="ar"
+                       >
                         {page.verses.map((verse) => (
                           <div key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
                             {/* Verse Text with enhanced Arabic rendering */}

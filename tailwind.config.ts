@@ -25,6 +25,7 @@ export default {
 				othmani: ["Scheherazade New", "Amiri Quran", "Amiri", "serif"],
 				kufi: ["Noto Kufi Arabic", "Amiri", "serif"],
 				mushaf: ["Noto Kufi Arabic", "Amiri Quran", "system-ui", "sans-serif"],
+				uthmanic: ["KFGQPC Uthmanic Hafs", "Amiri Quran", "Scheherazade New", "serif"],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
