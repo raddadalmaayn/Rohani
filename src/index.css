@@ -4,12 +4,15 @@
 
 /* Load Uthmanic Hafs font */
 @font-face {
-  font-family: 'KFGQPC Uthmanic Hafs';
-  src: url('/fonts/uthmanic-hafs.woff2') format('woff2');
+  font-family: 'KFGQPC Uthmanic Script HAFS';
+  src: url('https://fonts.qurancomplex.gov.sa/wp02/wp-content/uploads/2018/09/UthmanicHafs1Ver18.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
+
+/* Fallback font for better Arabic rendering */
+@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Scheherazade+New:wght@400;700&display=swap');
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
@@ -46,13 +49,15 @@ All colors MUST be HSL.
     --input: 60 15% 90%;              /* cream input */
     --ring: 82 47% 34%;               /* rohani-olive focus */
 
-    /* Mushaf specific colors */
-    --mushaf-page: 48 18% 97%;
-    --mushaf-text: 30 20% 8%;
-    --mushaf-header: 45 15% 95%;
-    --mushaf-badge-stroke: 45 70% 58%;
-    --mushaf-badge-fill: 48 85% 96%;
-    --mushaf-sajdah: 142 76% 36%;
+    /* Mushaf specific colors - Traditional cream pages */
+    --mushaf-page: 46 35% 96%;           /* Warmer cream like traditional mushaf */
+    --mushaf-text: 35 15% 15%;           /* Deep brown-black for text */
+    --mushaf-header: 45 25% 94%;         /* Slightly warmer header */
+    --mushaf-badge-stroke: 35 45% 45%;   /* Traditional gold-brown stroke */
+    --mushaf-badge-fill: 46 40% 92%;     /* Subtle cream fill */
+    --mushaf-sajdah: 142 76% 36%;        /* Keep green for prostration */
+    --mushaf-border: 45 25% 88%;         /* Warm border color */
+    --mushaf-shadow: 35 15% 15% / 0.1;   /* Subtle shadow using text color */
 
     /* Spiritual design tokens */
     --gradient-spiritual: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
@@ -120,19 +125,62 @@ All colors MUST be HSL.
   }
 }
 
-/* Mushaf text styling with responsive font size */
+/* Mushaf text styling with traditional spacing */
 .mushafText {
   text-align: justify;
-  text-align-last: justify;
-  word-spacing: 0.08em;
-  line-height: 2.2;
-  letter-spacing: 0.02em;
-  font-size: clamp(20px, 4.5vw, 32px);
+  text-align-last: center;
+  word-spacing: 0.12em;
+  line-height: 2.4;
+  letter-spacing: 0.03em;
+  font-size: clamp(22px, 5vw, 36px);
+  text-shadow: 0 1px 2px hsl(var(--mushaf-shadow));
+  font-kerning: auto;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Responsive mushaf wrapper */
+/* Enhanced ayah spacing */
+.ayah-text {
+  display: inline-block;
+  margin: 0.2em 0.5em;
+  padding: 0.1em;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.ayah-text:hover {
+  background-color: hsl(var(--mushaf-badge-fill));
+}
+
+/* Responsive mushaf wrapper with traditional proportions */
 .mushaf-wrapper {
-  width: clamp(280px, 94vw, 640px);
+  width: clamp(320px, 92vw, 720px);
+  max-height: 85vh;
+  box-shadow: 0 8px 32px -8px hsl(var(--mushaf-shadow));
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Traditional mushaf page styling */
+.mushaf-page {
+  background: linear-gradient(145deg, hsl(var(--mushaf-page)), hsl(46 30% 98%));
+  border: 1px solid hsl(var(--mushaf-border));
+  position: relative;
+}
+
+.mushaf-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(90deg, transparent 50px, hsl(var(--mushaf-border)) 50px, hsl(var(--mushaf-border)) 52px, transparent 52px),
+    linear-gradient(0deg, transparent 50px, hsl(var(--mushaf-border)) 50px, hsl(var(--mushaf-border)) 52px, transparent 52px);
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 /* Large screen translation layout */
