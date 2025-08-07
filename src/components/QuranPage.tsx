@@ -206,40 +206,34 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
               {quranPages.map((page, pageIndex) => (
                 <div 
                   key={pageIndex}
-                  className="mushaf-page min-h-[650px] relative"
+                  className="bg-mushaf-page rounded-lg shadow-lg border border-mushaf-badge-stroke/20 min-h-[600px]"
                   onClick={handlePageDoubleTap}
                 >
                   {/* Decorative Surah Header */}
                   {pageIndex === 0 && (
-                    <div className="text-center py-8 px-6 border-b border-mushaf-border">
-                      <div className="inline-block border-2 border-mushaf-badge-stroke rounded-xl p-6 bg-gradient-to-br from-mushaf-badge-fill via-mushaf-page to-mushaf-badge-fill shadow-lg">
+                    <div className="text-center py-6 px-4 border-b border-mushaf-badge-stroke/30">
+                      <div className="inline-block border-2 border-mushaf-badge-stroke rounded-lg p-4 bg-gradient-to-r from-mushaf-badge-fill to-mushaf-page">
                          <div 
-                           className="text-2xl font-bold text-mushaf-text font-uthmanic mb-2 tracking-wide"
+                           className="text-xl font-bold text-mushaf-text font-uthmanic mb-1"
                            dir="rtl"
                            lang="ar"
-                           style={{ textShadow: '0 1px 3px hsl(var(--mushaf-shadow))' }}
                          >
                            سُورَةُ {selectedSurah.name_ar}
                          </div>
-                        <div className="text-sm text-mushaf-text/70 font-arabic tracking-wider" lang="en">
+                        <div className="text-xs text-mushaf-text/70 font-arabic" lang="en">
                           {selectedSurah.name_en}
                         </div>
-                        <div className="mt-3 w-20 h-0.5 bg-mushaf-badge-stroke/40 mx-auto rounded-full"></div>
                       </div>
                     </div>
                   )}
 
                   {/* Basmala (if not Surah At-Tawbah and first page) */}
                   {selectedSurah.id !== 9 && pageIndex === 0 && (
-                    <div className="text-center py-8 px-4">
+                    <div className="text-center py-6">
                        <div 
-                         className="text-3xl font-bold text-mushaf-text font-uthmanic leading-relaxed tracking-wider"
+                         className="text-2xl font-bold text-mushaf-text font-uthmanic leading-relaxed"
                          dir="rtl"
                          lang="ar"
-                         style={{ 
-                           textShadow: '0 2px 4px hsl(var(--mushaf-shadow))',
-                           fontVariant: 'small-caps'
-                         }}
                        >
                          بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                        </div>
@@ -247,7 +241,7 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                   )}
 
                   {/* Verses Container */}
-                  <div className="px-8 py-10 min-h-[520px]">
+                  <div className="px-6 py-8 min-h-[500px]">
                     {showTranslation && !isMobile ? (
                       // Large screen: side-by-side layout
                       <div className="translation-grid">
@@ -282,21 +276,21 @@ const QuranPage: React.FC<QuranPageProps> = ({ onNavigateHome }) => {
                        >
                          {page.verses.map((verse) => (
                            <div key={`${verse.surah_no}-${verse.ayah_no_surah}`} className="inline">
-                             {/* Verse Text with enhanced Arabic rendering */}
-                             <span className="ayah-text">{enhanceArabicText(verse.ayah_ar)}</span>
+                             {/* Verse Text */}
+                             <span className="inline">{enhanceArabicText(verse.ayah_ar)}</span>
                              
                              {/* Ayah Badge */}
                              <AyahBadge number={verse.ayah_no_surah} isSajdah={verse.sajah_ayah} />
                              
                              {/* Translation inline beneath each ayah (mobile) */}
                              {showTranslation && verse.ayah_en && (
-                               <div className="translation text-mushaf-text/65 text-sm mt-2 mb-4 px-2 py-1 bg-mushaf-badge-fill/30 rounded-md" dir="ltr" lang="en">
+                               <div className="translation text-mushaf-text/60 text-sm mt-1 mb-3" dir="ltr" lang="en">
                                  {verse.ayah_en}
                                </div>
                              )}
                              
                              {/* Space between verses */}
-                             <span className="inline-block w-2"></span>
+                             <span className="inline-block w-1"></span>
                            </div>
                          ))}
                       </div>

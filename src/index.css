@@ -2,17 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Load Uthmanic Hafs font */
-@font-face {
-  font-family: 'KFGQPC Uthmanic Script HAFS';
-  src: url('https://fonts.qurancomplex.gov.sa/wp02/wp-content/uploads/2018/09/UthmanicHafs1Ver18.otf') format('opentype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Fallback font for better Arabic rendering */
-@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Scheherazade+New:wght@400;700&display=swap');
+/* Load traditional Arabic fonts for Quran */
+@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Noto+Naskh+Arabic:wght@400;700&display=swap');
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
@@ -49,15 +40,13 @@ All colors MUST be HSL.
     --input: 60 15% 90%;              /* cream input */
     --ring: 82 47% 34%;               /* rohani-olive focus */
 
-    /* Mushaf specific colors - Traditional cream pages */
-    --mushaf-page: 46 35% 96%;           /* Warmer cream like traditional mushaf */
-    --mushaf-text: 35 15% 15%;           /* Deep brown-black for text */
-    --mushaf-header: 45 25% 94%;         /* Slightly warmer header */
-    --mushaf-badge-stroke: 35 45% 45%;   /* Traditional gold-brown stroke */
-    --mushaf-badge-fill: 46 40% 92%;     /* Subtle cream fill */
-    --mushaf-sajdah: 142 76% 36%;        /* Keep green for prostration */
-    --mushaf-border: 45 25% 88%;         /* Warm border color */
-    --mushaf-shadow: 35 15% 15% / 0.1;   /* Subtle shadow using text color */
+    /* Mushaf specific colors - Clean and readable */
+    --mushaf-page: 50 15% 98%;           /* Clean off-white */
+    --mushaf-text: 25 15% 12%;           /* Dark brown for readability */
+    --mushaf-header: 50 10% 96%;         /* Subtle header */
+    --mushaf-badge-stroke: 25 40% 45%;   /* Warm brown stroke */
+    --mushaf-badge-fill: 50 20% 95%;     /* Light fill */
+    --mushaf-sajdah: 142 76% 36%;        /* Green for prostration */
 
     /* Spiritual design tokens */
     --gradient-spiritual: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
@@ -125,62 +114,20 @@ All colors MUST be HSL.
   }
 }
 
-/* Mushaf text styling with traditional spacing */
+/* Clean Mushaf text styling */
 .mushafText {
   text-align: justify;
   text-align-last: center;
-  word-spacing: 0.12em;
-  line-height: 2.4;
-  letter-spacing: 0.03em;
-  font-size: clamp(22px, 5vw, 36px);
-  text-shadow: 0 1px 2px hsl(var(--mushaf-shadow));
-  font-kerning: auto;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  word-spacing: 0.1em;
+  line-height: 2.5;
+  letter-spacing: 0.025em;
+  font-size: clamp(24px, 5vw, 32px);
+  font-weight: 400;
 }
 
-/* Enhanced ayah spacing */
-.ayah-text {
-  display: inline-block;
-  margin: 0.2em 0.5em;
-  padding: 0.1em;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.ayah-text:hover {
-  background-color: hsl(var(--mushaf-badge-fill));
-}
-
-/* Responsive mushaf wrapper with traditional proportions */
+/* Responsive mushaf wrapper */
 .mushaf-wrapper {
-  width: clamp(320px, 92vw, 720px);
-  max-height: 85vh;
-  box-shadow: 0 8px 32px -8px hsl(var(--mushaf-shadow));
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-/* Traditional mushaf page styling */
-.mushaf-page {
-  background: linear-gradient(145deg, hsl(var(--mushaf-page)), hsl(46 30% 98%));
-  border: 1px solid hsl(var(--mushaf-border));
-  position: relative;
-}
-
-.mushaf-page::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    linear-gradient(90deg, transparent 50px, hsl(var(--mushaf-border)) 50px, hsl(var(--mushaf-border)) 52px, transparent 52px),
-    linear-gradient(0deg, transparent 50px, hsl(var(--mushaf-border)) 50px, hsl(var(--mushaf-border)) 52px, transparent 52px);
-  opacity: 0.3;
-  pointer-events: none;
+  width: clamp(320px, 90vw, 700px);
 }
 
 /* Large screen translation layout */
