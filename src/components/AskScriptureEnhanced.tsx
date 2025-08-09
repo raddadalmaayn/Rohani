@@ -12,23 +12,18 @@ import { useUserProgress } from '@/hooks/use-user-progress';
 import { useLanguage } from '@/hooks/use-language';
 import { VerseFeedback } from './VerseFeedback';
 
-interface QuranVerse {
+interface Scripture {
   id: string;
   source_ref: string;
   text_ar: string;
   text_en?: string;
-}
-
-interface Hadith {
-  id: string;
-  source_ref: string;
-  text_ar: string;
-  text_en?: string;
+  text_type: 'quran' | 'hadith';
+  chapter_name: string;
+  verse_number: number | null;
 }
 
 interface EnhancedResponse {
-  ayat: QuranVerse[];
-  ahadith: Hadith[];
+  scriptures: Scripture[];
   practical_tip: string;
   dua: string;
   is_sensitive: boolean;
@@ -57,7 +52,7 @@ export function AskScriptureEnhanced({ language, tradition }: AskScriptureEnhanc
     try {
       console.log('Calling ask-scripture-enhanced function with query:', query);
       
-      const { data, error } = await supabase.functions.invoke('ask-scripture-enhanced', {
+      const { data, error } = await supabase.functions.invoke('ask-scripture', {
         body: { 
           query: query.trim(),
           lang: currentLanguage,
@@ -76,7 +71,10 @@ export function AskScriptureEnhanced({ language, tradition }: AskScriptureEnhanc
       setResults(response);
 
       // Save search to history and update progress
-      const totalResults = (response.ayat?.length || 0) + (response.ahadith?.length || 0);
+      const quranCount = response.scriptures?.filter(s => s.text_type === 'quran').length || 0;
+      const hadithCount = response.scriptures?.filter(s => s.text_type === 'hadith').length || 0;
+      const totalResults = quranCount + hadithCount;
+      
       await saveSearch(query.trim(), totalResults);
       await updateProgress(1, 0, query.trim());
 
@@ -85,8 +83,8 @@ export function AskScriptureEnhanced({ language, tradition }: AskScriptureEnhanc
         toast({
           title: currentLanguage === 'ar' ? 'تم العثور على نتائج' : 'Results Found',
           description: currentLanguage === 'ar' 
-            ? `وُجدت ${response.ayat?.length || 0} آيات و ${response.ahadith?.length || 0} أحاديث`
-            : `Found ${response.ayat?.length || 0} verses and ${response.ahadith?.length || 0} hadiths`,
+            ? `وُجدت ${quranCount} آيات و ${hadithCount} أحاديث`
+            : `Found ${quranCount} verses and ${hadithCount} hadiths`,
         });
       }
       
@@ -192,7 +190,7 @@ export function AskScriptureEnhanced({ language, tradition }: AskScriptureEnhanc
             {renderScriptureCard(
               currentLanguage === 'ar' ? 'آيات قرآنية' : 'Quranic Verses',
               <BookOpen className="h-5 w-5 text-primary" />,
-              results.ayat,
+              results.scriptures?.filter(s => s.text_type === 'quran') || [],
               true
             )}
 
@@ -200,7 +198,7 @@ export function AskScriptureEnhanced({ language, tradition }: AskScriptureEnhanc
             {renderScriptureCard(
               currentLanguage === 'ar' ? 'أحاديث شريفة' : 'Prophetic Traditions',
               <Sparkles className="h-5 w-5 text-secondary" />,
-              results.ahadith,
+              results.scriptures?.filter(s => s.text_type === 'hadith') || [],
               false
             )}
 

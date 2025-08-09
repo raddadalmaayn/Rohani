@@ -32,7 +32,7 @@ interface ScriptureResult {
   text_type: string;
   chapter_name: string;
   verse_number: number | null;
-  similarity: number;
+  similarity?: number;
 }
 
 interface LLMResponse {
@@ -40,18 +40,31 @@ interface LLMResponse {
   dua: string;
 }
 
-interface VerseScore {
-  id: string;
-  score: number;
-  reason: string;
+// New interfaces for LLM extraction
+interface QuranRef {
+  surah_name_ar: string | null;
+  surah_name_en: string | null;
+  surah_number: number | null;
+  ayah_numbers: number[];
+  ayah_ranges?: { from: number; to: number }[];
+  notes: string | null;
 }
 
-interface LLMRerankResponse {
-  scores: VerseScore[];
+interface HadithRef {
+  source: string;
+  book: string | null;
+  number: string | null;
+  topic: string | null;
+  text_ar: string | null;
+  text_en: string | null;
+  grade: string | null;
 }
 
-interface StrictFilterResponse {
-  keep: number[];
+interface Extraction {
+  quran: QuranRef[];
+  hadith: HadithRef[];
+  practical_tip: string;
+  dua: string;
 }
 
 serve(async (req) => {
@@ -93,9 +106,8 @@ serve(async (req) => {
       console.log('✅ CACHE HIT! Total time <100ms');
       console.timeEnd('total');
       return new Response(JSON.stringify({
-        ayat: cachedResult.verses || [],
-        ahadith: cachedResult.hadith || [],
-        generic_tip: cachedResult.practical_tip,
+        scriptures: [...(cachedResult.verses || []), ...(cachedResult.hadith || [])],
+        practical_tip: cachedResult.practical_tip,
         dua: cachedResult.dua,
         is_sensitive: false
       }), {
@@ -103,249 +115,122 @@ serve(async (req) => {
       });
     }
 
+    // Detect language if not provided (simple Arabic char check)
+    const detectedLang = lang || (/[\u0600-\u06FF]/.test(query) ? 'ar' : 'en');
+
     // Check for sensitive religious topics that require scholars
     const sensitiveTopics = /(?:طلاق|حرام|حلال|فتوى|زكاة|ميراث|أحكام|فقه)/i;
     const isSensitiveTopic = sensitiveTopics.test(query);
 
-    // 1. Start parallel operations
-    console.time('embed');
-    
-    // Check embedding cache first
-    const embeddingCacheKey = await createCacheKey(query, 'embedding');
-    const { data: cachedEmbedding } = await supabase
-      .from('embedding_cache')
-      .select('embedding')
-      .eq('key', embeddingCacheKey)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // 7 day cache
-      .maybeSingle();
-    
-    let queryEmbedding: number[] | null = null;
-    
-    if (cachedEmbedding) {
-      console.log('Embedding cache hit!');
-      queryEmbedding = cachedEmbedding.embedding;
-      console.timeEnd('embed');
-    } else {
-      try {
-        const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            input: query,
-            model: 'text-embedding-ada-002'  
-          }),
-        });
+    // NEW PIPELINE: LLM extraction first, then verification/hydration
+    console.time('llm_extract');
+    let extraction: Extraction | null = null;
+    let quranResults: ScriptureResult[] = [];
+    let hadithResults: ScriptureResult[] = [];
+    let extractionUsed = false;
 
-        if (!embeddingResponse.ok) {
-          const errorText = await embeddingResponse.text();
-          console.error('OpenAI Embedding API error:', errorText);
-          
-          if (errorText.includes('insufficient_quota')) {
-            console.log('Quota exceeded, falling back to text search...');
-            queryEmbedding = null;
-          } else {
-            throw new Error(`OpenAI Embedding API error: ${errorText}`);
-          }
-        } else {
-          const embeddingData = await embeddingResponse.json();
-          queryEmbedding = embeddingData.data[0].embedding;
-          
-          // Cache the embedding for future use
-          try {
-            await supabase.from('embedding_cache').insert({
-              key: embeddingCacheKey,
-              embedding: queryEmbedding
-            });
-          } catch (cacheError) {
-            console.log('Failed to cache embedding:', cacheError);
-          }
-        }
-        console.timeEnd('embed');
-      } catch (embeddingError) {
-        console.error('Embedding generation failed:', embeddingError);
-        queryEmbedding = null;
-        console.timeEnd('embed');
-      }
-    }
+    try {
+      extraction = await extractReferencesWithLLM(query, detectedLang);
+      extractionUsed = true;
+      console.timeEnd('llm_extract');
 
-    // 2. Start parallel operations after embedding
-    console.time('db_quran');
-    console.time('db_hadith');
-    console.time('llm_advice');
-    
-    // Expand query with synonyms for better matching
-    const { data: expandedQuery } = await supabase
-      .rpc('expand_query_with_synonyms', { 
-        input_query: query, 
-        input_lang: lang 
-      });
-    
-    const searchQuery = expandedQuery || query;
-    console.log(`Original query: "${query}", Expanded: "${searchQuery}"`);
-    
-    let quranResults = [];
-    let hadithResults = [];
-    let llmAdvice: LLMResponse;
-    
-    if (queryEmbedding) {
-      console.log('Using semantic search with embeddings...');
-      
-      // Parallel search operations
-      const [versesPromise, hadithPromise, advicePromise] = await Promise.allSettled([
-        // Verses search
-        supabase.rpc('search_verses_local', {
-          q: searchQuery,
-          lang: lang,
-          q_embedding: `[${queryEmbedding.join(',')}]`,
-          limit_n: 12
-        }),
-        
-        // Hadith search  
-        supabase.rpc('search_hadith_local', {
-          q: searchQuery,
-          lang: lang,
-          q_embedding: queryEmbedding,
-          limit_n: 12
-        }),
-        
-        // LLM advice generation (start early)
-        generateAdviceParallel(query, lang, [])
+      // Parallel hydration of Quran and Hadith references
+      const [hydratedQuran, hydratedHadith] = await Promise.allSettled([
+        hydrateQuranRefs(extraction.quran, detectedLang, supabase),
+        hydrateHadithRefs(extraction.hadith, detectedLang, supabase)
       ]);
-      
-      // Process verses results
-      console.timeEnd('db_quran');
-      if (versesPromise.status === 'fulfilled' && versesPromise.value.data) {
-        const versesData = versesPromise.value.data;
-        console.log('raw verses:', versesData.length);
-        
-        const rawVerses = versesData.map(v => ({
-          id: v.id.toString(),
-          source_ref: `${v.surah_name_ar} ${v.ayah_number}`,
-          text_ar: v.text_ar,
-          text_en: v.text_en,
-          similarity: v.score
-        }));
 
-        // Filter by local score threshold first
-        const MIN_LOCAL_SCORE = 0.68;
-        const versesLocal = rawVerses.filter(v => v.similarity >= MIN_LOCAL_SCORE);
-        console.log('local', versesLocal.length);
-        
-        // Apply strict LLM filtering every time
-        console.time('llm_rerank');
-        try {
-          const versesFinal = await rerankVersesStrict(query, versesLocal, lang);
-          quranResults = versesFinal;
-          console.log('afterLLM', quranResults.length);
-        } catch (llmError) {
-          console.error('LLM re-ranking failed, using fallback:', llmError);
-          quranResults = versesLocal.filter(r => r.similarity >= 0.75).slice(0, 3);
-          console.log('afterLLM (fallback):', quranResults.length);
-        }
-        console.timeEnd('llm_rerank');
+      if (hydratedQuran.status === 'fulfilled') {
+        quranResults = hydratedQuran.value;
+        console.log(`✅ Hydrated ${quranResults.length} Quran verses`);
       } else {
-        console.error('Verses search error:', versesPromise.status === 'rejected' ? versesPromise.reason : 'Unknown error');
+        console.error('Quran hydration failed:', hydratedQuran.reason);
       }
-      
-      // Process hadith results
-      console.timeEnd('db_hadith');
-      if (hadithPromise.status === 'fulfilled' && hadithPromise.value.data) {
-        const hadithData = hadithPromise.value.data;
-        console.log('raw hadith:', hadithData.length);
-        
-        // Apply similarity threshold filtering for hadith
-        const MIN_SIM = 0.60;
-        hadithResults = hadithData.filter(r => r.score >= MIN_SIM);
-        
-        // Apply conditional LLM re-ranking for hadith too
-        if (hadithResults.length > 3 || (hadithResults.length > 0 && Math.max(...hadithResults.map(r => r.score)) < 0.80)) {
-          try {
-            const rerankedHadith = await rerankVersesWithLLM(query, hadithResults.map(h => ({
-              id: h.id,
-              source_ref: h.source_ref,
-              text_ar: h.text_ar,
-              text_en: h.text_en,
-              similarity: h.score
-            })), lang);
-            hadithResults = rerankedHadith;
-          } catch (llmError) {
-            console.error('Hadith LLM re-ranking failed:', llmError);
-            hadithResults = hadithResults.filter(r => r.score >= 0.65).slice(0, 3);
-          }
-        } else {
-          hadithResults = hadithResults.slice(0, 3);
-        }
-        
-        console.log('Hadith search processed:', hadithResults.length, 'results');
-      }
-      
-      // Get advice result
-      console.timeEnd('llm_advice');
-      if (advicePromise.status === 'fulfilled') {
-        llmAdvice = advicePromise.value;
+
+      if (hydratedHadith.status === 'fulfilled') {
+        hadithResults = hydratedHadith.value;
+        console.log(`✅ Hydrated ${hadithResults.length} Hadith entries`);
       } else {
-        console.error('Advice generation failed:', advicePromise.reason);
-        llmAdvice = generateContextualAdvice(query, [...quranResults, ...hadithResults], lang);
+        console.error('Hadith hydration failed:', hydratedHadith.reason);
       }
-    } else {
-      // Text-only fallback path
-      console.log('Using text-only search...');
-      llmAdvice = generateContextualAdvice(query, [], lang);
+    } catch (llmError) {
+      console.error('LLM extraction failed, falling back to local search:', llmError);
+      console.timeEnd('llm_extract');
+      extractionUsed = false;
     }
-    
-    console.log('After processing - Quran:', quranResults.length, 'Hadith:', hadithResults.length);
-    
-    // Light fallback for verses only if absolutely no results at all
-    if (quranResults.length === 0 && hadithResults.length === 0) {
-      console.log('No semantic matches found, trying text search fallback...');
+
+    // Fallback to local search only if extraction yields nothing
+    if (!extractionUsed || (quranResults.length === 0 && hadithResults.length === 0)) {
+      console.log('Falling back to local search...');
+      console.time('fallback_search');
+
+      // Expand query with synonyms for better matching
+      const { data: expandedQuery } = await supabase
+        .rpc('expand_query_with_synonyms', { 
+          input_query: query, 
+          input_lang: detectedLang 
+        });
       
-      // Try local verses search without embedding (text-only fallback) using expanded query
+      const searchQuery = expandedQuery || query;
+      console.log(`Fallback - Original: "${query}", Expanded: "${searchQuery}"`);
+
+      // Try local verses search (limit to top 3 for fallback)
       const { data: versesFallback, error: fallbackError } = await supabase
         .rpc('search_verses_local', {
           q: searchQuery,
-          lang: lang,
+          lang: detectedLang,
           q_embedding: null,
-          limit_n: 12
+          limit_n: 3
         });
         
       if (!fallbackError && versesFallback && versesFallback.length > 0) {
-        // Convert to expected format
-        const rawFallbackVerses = versesFallback.map(v => ({
+        quranResults = versesFallback.map((v: any) => ({
           id: v.id.toString(),
-          source_ref: `${v.surah_name_ar} ${v.ayah_number}`,
+          source_ref: `${v.surah_name_ar}:${v.ayah_number}`,
           text_ar: v.text_ar,
-          text_en: v.text_en,
-          similarity: v.score * 0.5 // Mark as fallback with lower score
+          text_type: 'quran',
+          chapter_name: v.surah_name_ar,
+          verse_number: v.ayah_number,
+          similarity: v.score
         }));
-
-        // Try LLM re-ranking even for fallback
-        try {
-          const rerankedFallback = await rerankVersesWithLLM(query, rawFallbackVerses, lang);
-          quranResults = rerankedFallback;
-          console.log('Fallback with LLM re-ranking found:', quranResults.length, 'results');
-        } catch (llmError) {
-          console.error('LLM re-ranking failed for fallback, using basic filtering:', llmError);
-          quranResults = rawFallbackVerses.slice(0, 3);
-          console.log('Fallback verses search found:', quranResults.length, 'results');
-        }
+        console.log(`Fallback found ${quranResults.length} Quran verses`);
       }
+
+      console.timeEnd('fallback_search');
     }
 
-    console.log('Final results - Quran:', quranResults.length, 'Hadith:', hadithResults.length);
+    // Get practical advice and dua (from LLM extraction or fallback)
+    let practicalTip = '';
+    let dua = '';
+
+    if (extraction && extractionUsed) {
+      practicalTip = extraction.practical_tip;
+      dua = extraction.dua;
+    } else {
+      // Use existing fallback advice generation
+      const fallbackAdvice = generateContextualAdvice(query, [...quranResults, ...hadithResults], detectedLang);
+      practicalTip = fallbackAdvice.practical_tip;
+      dua = fallbackAdvice.dua;
+    }
+
+    console.log(`📊 PIPELINE SUMMARY:`, {
+      query_length: query.length,
+      extraction_used: extractionUsed,
+      found_quran: quranResults.length,
+      found_hadith: hadithResults.length,
+      has_advice: !!practicalTip,
+      has_dua: !!dua
+    });
 
     // 3. If sensitive topic, return only scriptures without LLM advice
     if (isSensitiveTopic) {
       console.log('Sensitive topic detected, returning results only');
       return new Response(JSON.stringify({
-        ayat: quranResults || [],
-        ahadith: hadithResults || [],
-        generic_tip: lang === 'en' 
+        scriptures: [...quranResults, ...hadithResults],
+        practical_tip: detectedLang === 'en' 
           ? "This question requires consultation with qualified religious scholars."
           : "هذا السؤال يحتاج إلى استشارة أهل العلم المختصين.",
-        dua: lang === 'en'
+        dua: detectedLang === 'en'
           ? "O Allah, guide us to the truth and help us follow it"
           : "اللهم أرشدنا إلى الحق وأعنا على اتباعه",
         is_sensitive: true
@@ -354,20 +239,12 @@ serve(async (req) => {
       });
     }
 
-    // Use the advice that was already generated in parallel
-    if (!llmAdvice) {
-      console.log('Using fallback advice generation...');
-      const allResults = [...quranResults, ...hadithResults];
-      llmAdvice = generateContextualAdvice(query, allResults, lang);
-    }
-
     // Store query for analytics (optional)
     if (user_id) {
       try {
-        await supabase.from('user_queries').insert({
+        await supabase.from('search_history').insert({
           user_id,
           query,
-          query_type: 'scripture_search',
           results_count: quranResults.length + hadithResults.length
         });
       } catch (analyticsError) {
@@ -376,32 +253,26 @@ serve(async (req) => {
       }
     }
 
-    console.log('Final llmAdvice object:', JSON.stringify(llmAdvice, null, 2));
-    console.log('Practical tip:', llmAdvice?.practical_tip);
-    console.log('Dua:', llmAdvice?.dua);
+    console.log('Practical tip:', practicalTip);
+    console.log('Dua:', dua);
     
     const finalResponse = {
-      ayat: quranResults || [],
-      ahadith: hadithResults || [],
-      generic_tip: llmAdvice?.practical_tip || (lang === 'en' ? "Error generating advice" : "حدث خطأ في توليد النصيحة"),
-      dua: llmAdvice?.dua || (lang === 'en' ? "O Allah, guide us to the truth" : "اللهم أرشدنا إلى الحق"),
+      scriptures: [...quranResults, ...hadithResults],
+      practical_tip: practicalTip || (detectedLang === 'en' ? "Remember that Allah is always with you." : "تذكر أن الله معك دائماً."),
+      dua: dua || (detectedLang === 'en' ? "O Allah, guide us to the truth" : "اللهم أرشدنا إلى الحق"),
       is_sensitive: false
     };
-    
-    // Add detailed logging variables for the summary
-    let localCount = 0;
-    let finalCount = quranResults.length;
     
     // Log final summary before caching and return
     console.log('📊 FINAL SUMMARY:', {
       query_length: query.length,
-      found_ayat: finalResponse.ayat.length,
-      found_hadith: finalResponse.ahadith.length,
-      has_advice: !!finalResponse.generic_tip,
+      extraction_used: extractionUsed,
+      found_scriptures: finalResponse.scriptures.length,
+      quran_count: quranResults.length,
+      hadith_count: hadithResults.length,
+      has_advice: !!finalResponse.practical_tip,
       has_dua: !!finalResponse.dua,
-      cache_used: false,  // Only cache hits log cache_used: true above
-      local_filtered_verses: `local ${localCount} -> afterLLM ${finalCount}`,
-      semantic_scores: quranResults.map(r => r.similarity?.toFixed(2) || 'N/A').join(', ')
+      cache_used: false
     });
     
     // Cache the result for future queries
@@ -409,11 +280,11 @@ serve(async (req) => {
     try {
       await supabase.from('cached_queries').insert({
         key: cacheKey,
-        lang: lang,
+        lang: detectedLang,
         query: query,
-        verses: finalResponse.ayat,
-        hadith: finalResponse.ahadith,
-        practical_tip: finalResponse.generic_tip,
+        verses: quranResults,
+        hadith: hadithResults,
+        practical_tip: finalResponse.practical_tip,
         dua: finalResponse.dua
       });
       console.log('✅ Result cached successfully');
@@ -422,26 +293,21 @@ serve(async (req) => {
     }
     console.timeEnd('cache_write');
     
-    // Add notice if no scriptures were found but still provide advice
-    const responseWithNotice = {
-      ...finalResponse,
-      no_scripture_notice: (quranResults.length === 0 && hadithResults.length === 0)
-    };
-    
     console.timeEnd('total');
     console.log('🎯 REQUEST COMPLETE');
-    return new Response(JSON.stringify(responseWithNotice), {
+    return new Response(JSON.stringify(finalResponse), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Error in ask-scripture function:', error?.stack || error);
+    const lang = 'en'; // Default lang for error responses
     return new Response(JSON.stringify({ 
       error: error.message,
-      ayat: [],
-      ahadith: [],
-      generic_tip: lang === 'en' ? "System error occurred. Please try again." : "حدث خطأ في النظام. حاول مرة أخرى.",
-      dua: lang === 'en' ? "O Allah, make our affairs easy for us" : "اللهم يسر لنا أمورنا"
+      scriptures: [],
+      practical_tip: lang === 'en' ? "System error occurred. Please try again." : "حدث خطأ في النظام. حاول مرة أخرى.",
+      dua: lang === 'en' ? "O Allah, make our affairs easy for us" : "اللهم يسر لنا أمورنا",
+      is_sensitive: false
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -777,3 +643,285 @@ ${contextText}
     throw new Error('Failed to parse parallel GPT response as JSON');
   }
 }
+
+// LLM extraction helper function
+async function extractReferencesWithLLM(query: string, lang: string): Promise<Extraction> {
+  console.time('llm_extraction_api');
+  
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+  
+  try {
+    const systemMessage = `You are a careful Islamic assistant. Extract only exact references. If unsure, leave fields null. Do not issue fatwas. Output ONLY valid JSON matching the schema below (no prose).`;
+
+    const userMessage = `lang: ${lang}
+query: "${query}"
+
+Extract exact Qur'an and Hadith references relevant to this query. 
+
+Rules:
+- If Arabic question → keep Qur'an/Hadith Arabic as-is
+- If English question → return Arabic text + English translation (if known) or leave translation null
+- For Hadith: Only include if you're confident about source, book, and authenticity
+- Be conservative - if unsure about a reference, exclude it
+
+Return ONLY JSON per this exact schema:
+{
+  "quran": [
+    {
+      "surah_name_ar": "string|null",
+      "surah_name_en": "string|null", 
+      "surah_number": "number|null",
+      "ayah_numbers": ["number"],
+      "ayah_ranges": [{"from": "number", "to": "number"}],
+      "notes": "string|null"
+    }
+  ],
+  "hadith": [
+    {
+      "source": "Bukhari|Muslim|Tirmidhi|Nasa'i|Abu Dawud|Ibn Majah|Ahmad|Other",
+      "book": "string|null",
+      "number": "string|null", 
+      "topic": "string|null",
+      "text_ar": "string|null",
+      "text_en": "string|null",
+      "grade": "Sahih|Hasan|Daif|null"
+    }
+  ],
+  "practical_tip": "string",
+  "dua": "string"
+}`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.2,
+        max_tokens: 700,
+        response_format: { type: "json_object" }
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+    console.timeEnd('llm_extraction_api');
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('LLM extraction API error:', errorText);
+      throw new Error(`LLM extraction failed: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const gptResponse = data.choices[0].message.content;
+    console.log('LLM extraction raw response:', gptResponse.substring(0, 200) + '...');
+
+    try {
+      return JSON.parse(gptResponse);
+    } catch (parseError) {
+      console.error('Failed to parse LLM extraction response:', gptResponse);
+      throw new Error('Failed to parse LLM extraction response as JSON');
+    }
+  } catch (error) {
+    clearTimeout(timeout);
+    console.timeEnd('llm_extraction_api');
+    throw error;
+  }
+}
+
+// Hydrate Quran references helper function
+async function hydrateQuranRefs(quranRefs: QuranRef[], lang: string, supabase: any): Promise<ScriptureResult[]> {
+  console.time('hydrate_quran');
+  if (!quranRefs || quranRefs.length === 0) {
+    console.timeEnd('hydrate_quran');
+    return [];
+  }
+
+  const results: ScriptureResult[] = [];
+  let droppedCount = 0;
+
+  try {
+    // Get surah name to number mapping if needed
+    const { data: surahs } = await supabase
+      .from('surahs')
+      .select('id, name_ar, name_en');
+    
+    const surahMap = new Map();
+    if (surahs) {
+      surahs.forEach((s: any) => {
+        surahMap.set(s.name_ar, s.id);
+        surahMap.set(s.name_en, s.id);
+      });
+    }
+
+    for (const ref of quranRefs) {
+      try {
+        // Determine surah number
+        let surahNumber = ref.surah_number;
+        if (!surahNumber && (ref.surah_name_ar || ref.surah_name_en)) {
+          surahNumber = surahMap.get(ref.surah_name_ar) || surahMap.get(ref.surah_name_en);
+        }
+
+        if (!surahNumber) {
+          console.log(`Dropping Quran ref: no valid surah number found`);
+          droppedCount++;
+          continue;
+        }
+
+        // Build ayah list from numbers and ranges
+        let ayahList = [...(ref.ayah_numbers || [])];
+        if (ref.ayah_ranges) {
+          for (const range of ref.ayah_ranges) {
+            for (let i = range.from; i <= range.to; i++) {
+              ayahList.push(i);
+            }
+          }
+        }
+
+        if (ayahList.length === 0) {
+          console.log(`Dropping Quran ref: no ayah numbers specified`);
+          droppedCount++;
+          continue;
+        }
+
+        // Remove duplicates
+        ayahList = [...new Set(ayahList)];
+
+        // Fetch verses from database
+        const { data: verses, error } = await supabase
+          .from('verses')
+          .select('*')
+          .eq('surah_no', surahNumber)
+          .in('ayah_no_surah', ayahList);
+
+        if (error) {
+          console.error('Database error fetching Quran verses:', error);
+          droppedCount += ayahList.length;
+          continue;
+        }
+
+        if (verses && verses.length > 0) {
+          for (const verse of verses) {
+            const shouldIncludeEnglish = lang === 'en';
+            results.push({
+              id: verse.ayah_no_quran.toString(),
+              source_ref: `${verse.surah_name_ar}:${verse.ayah_no_surah}`,
+              text_ar: verse.ayah_ar,
+              text_type: 'quran',
+              chapter_name: verse.surah_name_ar,
+              verse_number: verse.ayah_no_surah,
+              ...(shouldIncludeEnglish && verse.ayah_en ? { text_en: verse.ayah_en } : {})
+            });
+          }
+          console.log(`✅ Hydrated ${verses.length} verses from surah ${surahNumber}`);
+        } else {
+          console.log(`No verses found for surah ${surahNumber}, ayahs: ${ayahList.join(',')}`);
+          droppedCount += ayahList.length;
+        }
+      } catch (refError) {
+        console.error('Error processing Quran ref:', refError);
+        droppedCount++;
+      }
+    }
+
+    console.log(`Quran hydration complete: ${results.length} verses hydrated, ${droppedCount} dropped`);
+    console.timeEnd('hydrate_quran');
+    return results;
+  } catch (error) {
+    console.error('Quran hydration failed:', error);
+    console.timeEnd('hydrate_quran');
+    return [];
+  }
+}
+
+// Hydrate Hadith references helper function  
+async function hydrateHadithRefs(hadithRefs: HadithRef[], lang: string, supabase: any): Promise<ScriptureResult[]> {
+  console.time('hydrate_hadith');
+  if (!hadithRefs || hadithRefs.length === 0) {
+    console.timeEnd('hydrate_hadith');
+    return [];
+  }
+
+  const results: ScriptureResult[] = [];
+  let droppedCount = 0;
+
+  try {
+    for (const ref of hadithRefs) {
+      try {
+        // Try to verify against our hadith table
+        // First try exact match on source and number/book
+        let { data: hadithMatch } = await supabase
+          .from('hadith')
+          .select('*')
+          .ilike('source_ref', `%${ref.source}%`)
+          .limit(5);
+
+        // If we have book/number info, try to match on that too
+        if (!hadithMatch?.length && ref.book && ref.number) {
+          ({ data: hadithMatch } = await supabase
+            .from('hadith')
+            .select('*')
+            .or(`source_ref.ilike.%${ref.book}%,source_ref.ilike.%${ref.number}%`)
+            .limit(5));
+        }
+
+        // If we have Arabic text, try fuzzy text match with high similarity
+        if (!hadithMatch?.length && ref.text_ar) {
+          const { data: textMatches } = await supabase
+            .rpc('search_hadith_local', {
+              q: ref.text_ar.substring(0, 100), // First 100 chars
+              lang: 'ar',
+              q_embedding: null,
+              limit_n: 3
+            });
+
+          if (textMatches && textMatches.length > 0) {
+            // Only accept very high similarity matches (≥0.8)
+            const highSimilarityMatches = textMatches.filter((m: any) => m.score >= 0.8);
+            if (highSimilarityMatches.length > 0) {
+              hadithMatch = highSimilarityMatches;
+            }
+          }
+        }
+
+        if (hadithMatch && hadithMatch.length > 0) {
+          // Use the first (best) match
+          const match = hadithMatch[0];
+          const shouldIncludeEnglish = lang === 'en';
+          
+          results.push({
+            id: match.id,
+            source_ref: match.source_ref,
+            text_ar: match.text_ar,
+            text_type: 'hadith',
+            chapter_name: ref.source,
+            verse_number: null,
+            ...(shouldIncludeEnglish && match.text_en ? { text_en: match.text_en } : {})
+          });
+          console.log(`✅ Verified hadith from ${ref.source}`);
+        } else {
+          console.log(`❌ Could not verify hadith from ${ref.source} - dropping to avoid hallucination`);
+          droppedCount++;
+        }
+      } catch (refError) {
+        console.error('Error processing Hadith ref:', refError);
+        droppedCount++;
+      }
+    }
+
+    console.log(`Hadith hydration complete: ${results.length} hadith verified, ${droppedCount} dropped`);
+    console.timeEnd('hydrate_hadith');
+    return results;
+  } catch (error) {
+    console.error('Hadith hydration failed:', error);
+    console.timeEnd('hydrate_hadith');
+    return [];
+  }
