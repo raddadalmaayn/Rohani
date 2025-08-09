@@ -1,13 +1,18 @@
-/* tailwind.config.ts  ─ clean, scalable & type-safe */
+/* tailwind.config.ts — clean, scalable, type-safe */
 import type { Config } from 'tailwindcss'
+import plugin from 'tailwindcss/plugin'
 
-const config: Config = {
-  darkMode: ['class'],                                          // ⚑ toggle via .dark
+const config = {
+  darkMode: ['class'],
   content: [
-    './{app,components,pages,src}/**/*.{ts,tsx}',               // glob merge
+    './{app,components,pages,src}/**/*.{ts,tsx}',
+    './**/*.mdx',
+  ],
+  safelist: [
+    // if you toggle these via JS, keep them from being purged
+    'font-uthmanic', 'font-arabic', 'font-quran', 'font-mushaf',
   ],
 
-  /* ––––– global design tokens ––––– */
   theme: {
     container: {
       center: true,
@@ -16,42 +21,41 @@ const config: Config = {
     },
 
     extend: {
-      /* fonts */
       fontFamily: {
-        sans:      ['Inter', 'sans-serif'],
-        arabic:    ['Noto Sans Arabic', 'sans-serif'],
-        quran:     ['Amiri Quran', 'Scheherazade New', 'Noto Kufi Arabic', 'serif'],
-        mushaf:    ['Noto Kufi Arabic', 'Amiri Quran', 'system-ui', 'sans-serif'],
-        uthmanic:  ['Amiri Quran', 'Noto Naskh Arabic', 'serif'],
+        sans:     ['Inter', 'system-ui', 'sans-serif'],
+        arabic:   ['Noto Naskh Arabic', 'system-ui', 'serif'],
+        quran:    ['Amiri Quran', 'Scheherazade New', 'Noto Kufi Arabic', 'serif'],
+        mushaf:   ['Noto Kufi Arabic', 'Amiri Quran', 'system-ui', 'sans-serif'],
+        // Map to your local font-face for the Uthmānī script
+        uthmanic: ['"KFGQPC Uthmanic Script Hafs"', 'Scheherazade New', 'Amiri Quran', 'serif'],
       },
 
-      /* css-vars driven palette – change once in :root */
       colors: {
-        border:        'hsl(var(--border))',
-        input:         'hsl(var(--input))',
-        ring:          'hsl(var(--ring))',
-        background:    'hsl(var(--background))',
-        foreground:    'hsl(var(--foreground))',
+        border:      'hsl(var(--border))',
+        input:       'hsl(var(--input))',
+        ring:        'hsl(var(--ring))',
+        background:  'hsl(var(--background))',
+        foreground:  'hsl(var(--foreground))',
 
-        primary:   { DEFAULT: 'hsl(var(--primary))',   foreground: 'hsl(var(--primary-foreground))' },
-        secondary: { DEFAULT: 'hsl(var(--secondary))', foreground: 'hsl(var(--secondary-foreground))' },
-        destructive:{DEFAULT: 'hsl(var(--destructive))',foreground: 'hsl(var(--destructive-foreground))'},
-        muted:     { DEFAULT: 'hsl(var(--muted))',     foreground: 'hsl(var(--muted-foreground))' },
-        accent:    { DEFAULT: 'hsl(var(--accent))',    foreground: 'hsl(var(--accent-foreground))' },
-        popover:   { DEFAULT: 'hsl(var(--popover))',   foreground: 'hsl(var(--popover-foreground))' },
-        card:      { DEFAULT: 'hsl(var(--card))',      foreground: 'hsl(var(--card-foreground))' },
+        primary:     { DEFAULT: 'hsl(var(--primary))',     foreground: 'hsl(var(--primary-foreground))' },
+        secondary:   { DEFAULT: 'hsl(var(--secondary))',   foreground: 'hsl(var(--secondary-foreground))' },
+        destructive: { DEFAULT: 'hsl(var(--destructive))', foreground: 'hsl(var(--destructive-foreground))' },
+        muted:       { DEFAULT: 'hsl(var(--muted))',       foreground: 'hsl(var(--muted-foreground))' },
+        accent:      { DEFAULT: 'hsl(var(--accent))',      foreground: 'hsl(var(--accent-foreground))' },
+        popover:     { DEFAULT: 'hsl(var(--popover))',     foreground: 'hsl(var(--popover-foreground))' },
+        card:        { DEFAULT: 'hsl(var(--card))',        foreground: 'hsl(var(--card-foreground))' },
 
-        /* sidebar & mushaf sub-palettes */
         sidebar: {
-          DEFAULT:            'hsl(var(--sidebar-background))',
-          foreground:         'hsl(var(--sidebar-foreground))',
-          primary:            'hsl(var(--sidebar-primary))',
-          'primary-foreground':'hsl(var(--sidebar-primary-foreground))',
-          accent:             'hsl(var(--sidebar-accent))',
-          'accent-foreground':'hsl(var(--sidebar-accent-foreground))',
-          border:             'hsl(var(--sidebar-border))',
-          ring:               'hsl(var(--sidebar-ring))',
+          DEFAULT:              'hsl(var(--sidebar-background))',
+          foreground:           'hsl(var(--sidebar-foreground))',
+          primary:              'hsl(var(--sidebar-primary))',
+          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+          accent:               'hsl(var(--sidebar-accent))',
+          'accent-foreground':  'hsl(var(--sidebar-accent-foreground))',
+          border:               'hsl(var(--sidebar-border))',
+          ring:                 'hsl(var(--sidebar-ring))',
         },
+
         mushaf: {
           page:   'hsl(var(--mushaf-page))',
           text:   'hsl(var(--mushaf-text))',
@@ -64,7 +68,6 @@ const config: Config = {
         },
       },
 
-      /* decorative helpers */
       backgroundImage: {
         'gradient-spiritual': 'var(--gradient-spiritual)',
         'gradient-calm':      'var(--gradient-calm)',
@@ -82,26 +85,36 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
 
-      /* accordions */
       keyframes: {
-        accordionDown: {
+        'accordion-down': {
           from: { height: '0' },
           to:   { height: 'var(--radix-accordion-content-height)' },
         },
-        accordionUp: {
+        'accordion-up': {
           from: { height: 'var(--radix-accordion-content-height)' },
           to:   { height: '0' },
         },
       },
       animation: {
-        'accordion-down': 'accordionDown 0.2s ease-out',
-        'accordion-up':   'accordionUp 0.2s ease-out',
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up':   'accordion-up 0.2s ease-out',
       },
     },
   },
 
-  /* animate.css plugin for utility driven animations */
-  plugins: [require('tailwindcss-animate')],
-}
+  plugins: [
+    require('tailwindcss-animate'),
+    // Small utility for proper Arabic/Uthmānī ligatures when needed
+    plugin(({ addUtilities }) => {
+      addUtilities({
+        '.liga-uthmanic': {
+          fontVariantLigatures: 'contextual common discretionary historical',
+          WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
+        },
+      })
+    }),
+  ],
+} satisfies Config
 
 export default config
