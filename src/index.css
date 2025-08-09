@@ -1,136 +1,200 @@
-/* ──────────────── tailwind layer order ──────────────── */
+/* ───────────────── Tailwind layers ───────────────── */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ──────────────── Arabic / Qurʾān fonts ──────────────── */
+/* ───────────────── Fonts ───────────────── */
+/* Google-hosted fallbacks */
 @import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Noto+Naskh+Arabic:wght@400;700&display=swap');
 
-/* ──────────────── Design-tokens :root ──────────────── */
+/* Optional: local Uthmānī font. Replace URL with your file/CDN if available. */
+@font-face {
+  font-family: "KFGQPC Uthmanic Script Hafs";
+  src: local("KFGQPC Uthmanic Script Hafs"),
+       url("/fonts/KFGQPC-Uthmanic-Script-Hafs.woff2") format("woff2");
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF;
+}
+
+/* ───────────────── Design tokens (:root) ───────────────── */
 @layer base {
   :root {
-    /* ⁰ global */
-    --radius          : 1rem;                            /* 16 px round-ness */
-    --transition-mind : all .3s cubic-bezier(.4,0,.2,1);
+    /* corners & motion */
+    --radius: 1rem;
+    --transition-mindful: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* ① light palette (HSL only) */
-    --background      : 60 20% 98%;
-    --foreground      : 0  0%  18%;
-    --card            : 60 20% 98%;
-    --card-fg         : 0  0%  18%;
+    /* palette (HSL) */
+    --background: 60 20% 98%;
+    --foreground: 0 0% 18%;
 
-    --primary         : 82 47% 34%;
-    --primary-fg      : 0  0%  100%;
-    --secondary       : 199 100% 71%;
-    --secondary-fg    : 0  0%  18%;
+    --card: 60 20% 98%;
+    --card-foreground: 0 0% 18%;
 
-    --muted           : 60 15% 92%;
-    --muted-fg        : 0  0%  45%;
-    --accent          : var(--secondary);
-    --accent-fg       : var(--secondary-fg);
+    --popover: 60 20% 98%;
+    --popover-foreground: 0 0% 18%;
 
-    --destructive     : 0  84% 60%;
-    --destructive-fg  : 0  0%  98%;
-    --border          : 60 15% 85%;
-    --input           : 60 15% 90%;
-    --ring            : var(--primary);
+    --primary: 82 47% 34%;
+    --primary-foreground: 0 0% 100%;
 
-    /* ② mushaf sub-theme */
-    --mushaf-page     : 50 15% 98%;
-    --mushaf-text     : 25 15% 12%;
-    --mushaf-header   : 50 10% 96%;
-    --mushaf-badge-s  : 25 40% 45%;   /* stroke */
-    --mushaf-badge-f  : 50 20% 95%;   /* fill   */
-    --mushaf-sajdah   : 142 76% 36%;
+    --secondary: 199 100% 71%;
+    --secondary-foreground: 0 0% 18%;
 
-    /* ③ gradients & shadows */
-    --grad-spiritual  : linear-gradient(135deg,hsl(var(--primary)),hsl(var(--secondary)));
-    --grad-calm       : linear-gradient(180deg,hsl(var(--background)),hsl(var(--muted)));
-    --shadow-spirit   : 0 8px 32px -8px hsl(var(--primary)/.2);
-    --shadow-gentle   : 0 4px 16px -4px hsl(var(--primary)/.1);
+    --muted: 60 15% 92%;
+    --muted-foreground: 0 0% 45%;
 
-    /* ④ sidebar (optional) */
-    --sidebar-bg      : 0   0%  98%;
-    --sidebar-fg      : 240 6%  26%;
-    --sidebar-primary : 240 6%  10%;
-    --sidebar-primary-fg : 0 0% 98%;
-    --sidebar-accent  : 240 5%  96%;
-    --sidebar-accent-fg: var(--sidebar-primary);
-    --sidebar-border  : 220 13% 91%;
-    --sidebar-ring    : 217 91% 60%;
+    --accent: 199 100% 71%;
+    --accent-foreground: 0 0% 18%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 60 15% 85%;
+    --input: 60 15% 90%;
+    --ring: 82 47% 34%;
+
+    /* Mushaf sub-theme */
+    --mushaf-page: 50 15% 98%;
+    --mushaf-text: 25 15% 12%;
+    --mushaf-header: 50 10% 96%;
+    --mushaf-badge-stroke: 25 40% 45%;
+    --mushaf-badge-fill: 50 20% 95%;
+    --mushaf-sajdah: 142 76% 36%;
+
+    /* Gradients & shadows */
+    --gradient-spiritual: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    --gradient-calm: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted)));
+    --shadow-spiritual: 0 8px 32px -8px hsl(var(--primary) / .2);
+    --shadow-gentle: 0 4px 16px -4px hsl(var(--primary) / .1);
+
+    /* Sidebar (optional) */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
-  /* dark-mode overrides */
   .dark {
-    --background      : 222 84%  5%;
-    --foreground      : 210 40% 98%;
-    --card            : var(--background);
-    --card-fg         : var(--foreground);
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-    --primary         : var(--foreground);
-    --primary-fg      : 222 47% 11%;
-    --secondary       : 217 33% 18%;
-    --secondary-fg    : var(--foreground);
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
 
-    --muted           : var(--secondary);
-    --muted-fg        : 215 20% 65%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-    --border          : var(--secondary);
-    --input           : var(--secondary);
-    --ring            : 213 27% 84%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-    /* mushaf dark */
-    --mushaf-page     : 35 15% 12%;
-    --mushaf-text     : 48 95% 95%;
-    --mushaf-header   : 35 10%  8%;
-    --mushaf-badge-s  : 45 60% 70%;
-    --mushaf-badge-f  : 35 25% 20%;
-    --mushaf-sajdah   : 142 60% 50%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-    --sidebar-bg      : 240 6%  10%;
-    --sidebar-fg      : 240 5%  96%;
-    --sidebar-primary : 224 76% 48%;
-    --sidebar-primary-fg: 0 0% 100%;
-    --sidebar-accent  : 240 4%  16%;
-    --sidebar-border  : var(--sidebar-accent);
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+
+    /* Mushaf dark */
+    --mushaf-page: 35 15% 12%;
+    --mushaf-text: 48 95% 95%;
+    --mushaf-header: 35 10% 8%;
+    --mushaf-badge-stroke: 45 60% 70%;
+    --mushaf-badge-fill: 35 25% 20%;
+    --mushaf-sajdah: 142 60% 50%;
+
+    /* Sidebar dark */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
-  /* generic typography reset */
-  *      { @apply border-border; }
-  body   { @apply bg-background text-foreground font-sans antialiased; }
+  /* Base element styling */
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Better Arabic shaping by default on Arabic content */
+  [lang="ar"] {
+    font-feature-settings: "liga" 1, "calt" 1, "ccmp" 1;
+    text-rendering: optimizeLegibility;
+  }
 }
 
-/* ──────────────── utilities & helpers ──────────────── */
+/* ───────────────── Mushaf utilities ───────────────── */
 
-/* mushaf typography */
-.mushafText{
-  text-align:justify;
-  text-align-last:center;
-  word-spacing:.1em;
-  line-height:2.5;
-  letter-spacing:.025em;
-  font-size:clamp(24px,5vw,32px);
+/* Main Arabic text block (Uthmānī look) */
+.mushafText {
+  text-align: justify;
+  text-align-last: center;
+  word-spacing: .1em;
+  line-height: 2.5;
+  letter-spacing: .02em;
+  font-size: clamp(24px, 5vw, 32px);
 }
 
-/* responsive container for page */
-.mushaf-wrapper{ width:clamp(320px,90vw,700px); }
-
-/* side-by-side translation (≥1024px) */
-.translation-grid{
-  display:grid;
-  grid-template-columns:64% 36%;
-  gap:1rem;
+/* Responsive page container */
+.mushaf-wrapper {
+  width: clamp(320px, 90vw, 700px);
 }
-@media (max-width:1023px){ .translation-grid{ display:block; } }
 
-/* Ayah badge hover */
-.ayah-badge{ transition:transform .15s ease-in-out; }
-.ayah-badge:hover{ transform:scale(1.2); }
-
-/* invisible edge-zones for swipe / click */
-.edge-swipe-zone{
-  position:fixed; top:0; bottom:0; width:24px; z-index:10; opacity:0;
+/* Side-by-side translation on large screens */
+.translation-grid {
+  display: grid;
+  grid-template-columns: 64% 36%;
+  gap: 1rem;
+  align-items: start;
 }
-.edge-swipe-zone:focus{ outline:2px solid hsl(var(--primary)); outline-offset:2px; }
-.edge-swipe-left { left:0; }
-.edge-swipe-right{ right:0; }
+@media (max-width: 1023px) {
+  .translation-grid { display: block; }
+}
+
+/* Ayah badge hover micro-interaction */
+.ayah-badge {
+  transition: transform .15s ease-in-out;
+}
+.ayah-badge:hover {
+  transform: scale(1.2);
+}
+
+/* Invisible edge zones (for swipe/click nav) */
+.edge-swipe-zone {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 10;
+  opacity: 0;
+}
+.edge-swipe-zone:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+.edge-swipe-left { left: 0; }
+.edge-swipe-right { right: 0; }
+
+/* Optional: force Uthmānī ligatures where needed (matches plugin utility) */
+.liga-uthmanic {
+  font-variant-ligatures: common-ligatures contextual discretionary-ligatures historical-ligatures;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
