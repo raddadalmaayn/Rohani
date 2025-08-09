@@ -925,3 +925,39 @@ async function hydrateHadithRefs(hadithRefs: HadithRef[], lang: string, supabase
     console.timeEnd('hydrate_hadith');
     return [];
   }
+}
+
+// Generate contextual advice based on query and found texts
+function generateContextualAdvice(query: string, results: any[], lang: string = 'ar'): LLMResponse {
+  const queryLower = query.toLowerCase();
+  
+  // Common Islamic topics and their advice
+  const contextualAdvice: { [key: string]: { ar: { tip: string, dua: string }, en: { tip: string, dua: string } } } = {
+    'ذكر|هم|حزن|غم': {
+      ar: {
+        tip: 'عند الهم والحزن، أكثر من ذكر الله تعالى. قل "لا إله إلا الله العظيم الحليم، لا إله إلا الله رب العرش العظيم". أيضاً أكثر من الاستغفار والصلاة على النبي صلى الله عليه وسلم. احرص على قراءة القرآن خاصة سورة الفاتحة والمعوذتين.',
+        dua: 'اللهم أذهب عني الهم والحزن والغم، وأبدلني بهما الفرح والسرور والسعادة'
+      },
+      en: {
+        tip: 'During times of worry and sadness, increase your remembrance of Allah. Say "La ilaha illa Allah al-Azeem al-Haleem, La ilaha illa Allah Rabb al-Arsh al-Azeem". Also increase istighfar and sending blessings upon the Prophet. Make sure to read Quran, especially Al-Fatiha and the protective surahs.',
+        dua: 'O Allah, remove from me worry, sadness and grief, and replace them with joy and happiness'
+      }
+    }
+  };
+
+  // Check for matches and return appropriate advice
+  for (const [pattern, advice] of Object.entries(contextualAdvice)) {
+    if (new RegExp(pattern, 'i').test(queryLower)) {
+      return lang === 'ar' ? advice.ar : advice.en;
+    }
+  }
+
+  // Default advice
+  return lang === 'ar' ? {
+    tip: 'تذكر أن الله معك دائماً في أوقات الصعوبة. توجه إليه بالدعاء والذكر وقراءة القرآن. اصبر وتوكل على الله، فهو يعلم ما فيه الخير لك.',
+    dua: 'اللهم أعني على ذكرك وشكرك وحسن عبادتك'
+  } : {
+    tip: 'Remember that Allah is always with you in times of difficulty. Turn to Him through prayer, remembrance, and reading the Quran. Be patient and trust in His wisdom, for He knows what is best for you.',
+    dua: 'O Allah, help me remember You, thank You, and worship You in the best way'
+  };
+}
