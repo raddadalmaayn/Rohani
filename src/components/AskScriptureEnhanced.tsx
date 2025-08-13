@@ -74,7 +74,7 @@ export function AskScriptureEnhanced({ language, tradition }: AskScriptureEnhanc
         lang: langToSend,
         user_id: authUser.data.user?.id,
       };
-      return supabase.functions.invoke(fnName, { body, signal });
+      return supabase.functions.invoke(fnName, { body });
     },
     [query, langToSend]
   );

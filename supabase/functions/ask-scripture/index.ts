@@ -560,7 +560,7 @@ ${versesForLLM.map((v, i) => `${i+1}. رقم: ${v.id}, المرجع: ${v.source_
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5',
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
@@ -650,7 +650,7 @@ the question. 0–3 IDs max. Return strict JSON:
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5',
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
@@ -751,7 +751,7 @@ ${contextText}
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5',
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
