@@ -273,7 +273,7 @@ serve(async (req) => {
 
           // Cache result
           try {
-            await supabase.from('cached_queries').insert({
+            await supabase.from('cached_queries').upsert({
               key: cacheKey,
               lang: effLang,
               query,
@@ -281,7 +281,7 @@ serve(async (req) => {
               hadith: respObj.ahadith,
               practical_tip: respObj.generic_tip,
               dua: respObj.dua
-            });
+            }, { onConflict: 'key' });
           } catch (e) { console.log('Cache write failed (LLM-first):', e); }
 
           console.timeEnd('total');
@@ -479,7 +479,14 @@ serve(async (req) => {
     } else {
       // Text-only fallback path
       console.log('Using text-only search...');
-      llmAdvice = generateContextualAdvice(query, [], lang);
+      try {
+        console.time('llm_advice');
+        llmAdvice = await generateAdviceParallel(query, lang, []);
+        console.timeEnd('llm_advice');
+      } catch (e) {
+        console.error('Advice LLM failed (text-only path):', e);
+        llmAdvice = generateContextualAdvice(query, [], lang);
+      }
     }
     
     console.log('After processing - Quran:', quranResults.length, 'Hadith:', hadithResults.length);
@@ -593,7 +600,7 @@ serve(async (req) => {
     // Cache the result for future queries
     console.time('cache_write');
     try {
-      await supabase.from('cached_queries').insert({
+      await supabase.from('cached_queries').upsert({
         key: cacheKey,
         lang: lang,
         query: query,
@@ -601,7 +608,7 @@ serve(async (req) => {
         hadith: finalResponse.ahadith,
         practical_tip: finalResponse.generic_tip,
         dua: finalResponse.dua
-      });
+      }, { onConflict: 'key' });
       console.log('✅ Result cached successfully');
     } catch (cacheError) {
       console.log('⚠️ Failed to cache result:', cacheError);
