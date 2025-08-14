@@ -121,16 +121,16 @@ serve(async (req) => {
       const resp = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${openAIApiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gpt-5',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.2,
-          max_tokens: 700,
-          response_format: { type: 'json_object' }
-        }),
+          body: JSON.stringify({
+            model: 'gpt-5',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.2,
+            max_completion_tokens: 700,
+            response_format: { type: 'json_object' }
+          }),
         signal: controller.signal
       });
       clearTimeout(to);
@@ -321,7 +321,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             input: query,
-            model: 'text-embedding-ada-002'  
+            model: 'text-embedding-3-small'  
           }),
         });
 
@@ -759,7 +759,7 @@ ${versesForLLM.map((v, i) => `${i+1}. رقم: ${v.id}, المرجع: ${v.source_
         { role: 'user', content: userMessage }
       ],
       temperature: 0.1,
-      max_tokens: 1000,
+      max_completion_tokens: 1000,
       response_format: { type: "json_object" }
     }),
   });
@@ -849,7 +849,7 @@ the question. 0–3 IDs max. Return strict JSON:
         { role: 'user', content: userMessage }
       ],
       temperature: 0,
-      max_tokens: 100,
+      max_completion_tokens: 100,
       response_format: { type: "json_object" }
     }),
   });
@@ -950,7 +950,7 @@ ${contextText}
         { role: 'user', content: userMessage }
       ],
       temperature: 0.8,
-      max_tokens: 600
+      max_completion_tokens: 600
     }),
   });
 
