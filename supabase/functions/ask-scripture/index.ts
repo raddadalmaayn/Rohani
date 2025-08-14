@@ -122,12 +122,11 @@ serve(async (req) => {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${openAIApiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'gpt-5',
+            model: 'gpt-4o-mini',
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt }
             ],
-            temperature: 0.2,
             max_completion_tokens: 700,
             response_format: { type: 'json_object' }
           }),
@@ -321,7 +320,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             input: query,
-            model: 'text-embedding-3-small'  
+            model: 'text-embedding-ada-002'  
           }),
         });
 
@@ -758,7 +757,7 @@ ${versesForLLM.map((v, i) => `${i+1}. رقم: ${v.id}, المرجع: ${v.source_
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
       ],
-      temperature: 0.1,
+      
       max_completion_tokens: 1000,
       response_format: { type: "json_object" }
     }),
@@ -848,7 +847,7 @@ the question. 0–3 IDs max. Return strict JSON:
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
       ],
-      temperature: 0,
+      
       max_completion_tokens: 100,
       response_format: { type: "json_object" }
     }),
@@ -949,7 +948,7 @@ ${contextText}
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
       ],
-      temperature: 0.8,
+      
       max_completion_tokens: 600
     }),
   });
