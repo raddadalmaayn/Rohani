@@ -90,17 +90,24 @@ serve(async (req) => {
     console.timeEnd('cache_read');
     
     if (cachedResult) {
-      console.log('✅ CACHE HIT! Total time <100ms');
-      console.timeEnd('total');
-      return new Response(JSON.stringify({
-        ayat: cachedResult.verses || [],
-        ahadith: cachedResult.hadith || [],
-        generic_tip: cachedResult.practical_tip,
-        dua: cachedResult.dua,
-        is_sensitive: false
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      // Check if cached result is generic fallback - if so, bypass cache
+      const isGenericFallback = cachedResult.practical_tip === 'Remember that Allah is always with you in times of difficulty. Turn to Him through prayer, remembrance, and reading the Quran. Be patient and trust in His wisdom, for He knows what is best for you.';
+      
+      if (!isGenericFallback) {
+        console.log('✅ CACHE HIT! Total time <100ms');
+        console.timeEnd('total');
+        return new Response(JSON.stringify({
+          ayat: cachedResult.verses || [],
+          ahadith: cachedResult.hadith || [],
+          generic_tip: cachedResult.practical_tip,
+          dua: cachedResult.dua,
+          is_sensitive: false
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } else {
+        console.log('🔄 BYPASSING CACHE - Generic fallback detected');
+      }
     }
 
     // Check for sensitive religious topics that require scholars
@@ -752,7 +759,7 @@ ${versesForLLM.map((v, i) => `${i+1}. رقم: ${v.id}, المرجع: ${v.source_
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-5',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
@@ -842,7 +849,7 @@ the question. 0–3 IDs max. Return strict JSON:
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-5',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
@@ -943,7 +950,7 @@ ${contextText}
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-5',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
