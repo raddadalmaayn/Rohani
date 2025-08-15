@@ -128,15 +128,15 @@ serve(async (req) => {
       const resp = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${openAIApiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            max_completion_tokens: 700,
-            response_format: { type: 'json_object' }
-          }),
+        body: JSON.stringify({
+          model: 'gpt-5-2025-08-07',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          max_completion_tokens: 700,
+          response_format: { type: 'json_object' }
+        }),
         signal: controller.signal
       });
       clearTimeout(to);
@@ -327,7 +327,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             input: query,
-            model: 'text-embedding-ada-002'  
+            model: 'text-embedding-3-small'  
           }),
         });
 
@@ -759,12 +759,11 @@ ${versesForLLM.map((v, i) => `${i+1}. رقم: ${v.id}, المرجع: ${v.source_
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-2025-08-07',
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
       ],
-      
       max_completion_tokens: 1000,
       response_format: { type: "json_object" }
     }),
@@ -849,12 +848,11 @@ the question. 0–3 IDs max. Return strict JSON:
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-2025-08-07',
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
       ],
-      
       max_completion_tokens: 100,
       response_format: { type: "json_object" }
     }),
@@ -950,12 +948,11 @@ ${contextText}
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5-2025-08-07',
       messages: [
         { role: 'system', content: systemMessage },
         { role: 'user', content: userMessage }
       ],
-      
       max_completion_tokens: 600
     }),
   });
